@@ -1,0 +1,107 @@
+classdef cdsPrj < hgsetget
+    %cdsPrj A Cadence Project
+    %   A project for simulation and post-processing of data from the Cadence
+    %   Virtuoso IC design environment.
+    %
+    %  TO DO:
+    %     Add a data management function
+    %     test project save and load
+    %     convert cdsPrj to have a handle superclass
+    %     Add Ocean script support
+    %
+    properties
+        projectName % name of the current project
+        maskName % mask number
+        prjDir % Directory where all the project files are stored
+		%TOdate % Tape-out date
+        %components % Components
+    end
+    
+    properties (GetAccess=private)
+        env % Stores the Cadence environment setup
+    end
+    properties(Dependent)
+        matlabDir % .../prjDir/doc/matlab
+        docPath   % .../prjDir/doc
+        prjPath   % .../prjDir
+    end
+    
+    methods
+        function obj = cdsPrj(varargin)
+            % constructs a new project
+            % USAGE:
+            %        prj = cdsprj;
+            %        prj = cdsprj(prjDir);
+            %        prj = cdsPrj(prjDir,projectName,maskName);
+            
+            % Load environment variables
+            obj.env = cdsEnv;
+            % parse inputs
+            if(nargin >= 1)
+                obj.prjDir = varargin{1};
+            end
+            if(nargin == 5)
+                % Setup project information
+                obj.projectName = varargin(2);
+                obj.maskName = varargin(3);
+            end
+            %Setup directory structure
+            if(~exist(obj.matlabDir,'dir'))
+                    mkdir(obj.matlabDir);
+            end
+            if(~exist(obj.docPath,'dir'))
+                mkdir(obj.prjDir, 'doc');
+            end
+        end
+        function prjPath = get.prjPath(obj)
+            if(ispc)
+                prjPath = fullfile(obj.env.smbDrv,obj.env.prjDirBase,obj.prjDir);
+            else
+                prjPath = fullfile(obj.env.prjDirBase,obj.prjDir);
+            end
+            if(~exist(prjPath,'dir'))
+                error('prjPath:doesNotExist','prjPath doesnt exist');
+            end
+        end
+        function docPath = get.docPath(obj)
+                docPath = fullfile(obj.prjPath,'doc');
+        end
+        function prjDir = get.prjDir(obj)
+        	prjDir = obj.prjDir;
+        end
+		function obj=set.projectName(obj,val)
+			if(~ischar(val))
+				error('projectName:notStr','projectName must be a string');
+			end
+			obj.projectName = val;
+		end
+		function obj=set.maskName(obj,val)
+			if(~ischar(val))
+				error('maskName:notStr','maskName must be a string')
+			end
+			obj. maskName = val;
+        end
+		function obj=set.prjDir(obj,val)
+			if(~ischar(val))
+				error('prjDir:notStr','prjDir must be a string');
+            end
+			obj.prjDir = val;
+        end
+        function matlabDir = get.matlabDir(obj)
+                matlabDir = fullfile(obj.docPath,'matlab');
+        end
+		function save(obj)
+            save(fullfile(obj.matlabDir,strcat(obj.prjDir,'.mat')),'obj')
+        end
+	end
+
+	methods (Static)
+        function obj = loadPrj(prjFile)
+			load prjFile obj
+        end
+		function saveEnvInfo(prjDirBase, ocnBinDir, userName)
+			cdsEnv.save(prjDirBase, ocnBinDir, userName);
+        end
+    end
+end
+
