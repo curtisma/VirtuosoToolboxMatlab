@@ -40,6 +40,9 @@ function varargout  = cdsLoadData(filePath)
         header{strcmp(header,'Parameter')} = 'Corner';
         numericalCols = cellfun(@(x) ~isnan(str2double(x)),txt(1,:));
         txt(:,numericalCols) = cellfun(@str2double,txt(:,numericalCols), 'UniformOutput', false);
+        if(any(cellfun(@(x) strcmp(x,'header_MIPI.scs'),header(2:end))))
+            header{cellfun(@(x) strcmp(x,'header_MIPI.scs'),header)} = 'Process';
+        end
         varargout = {cell2table(txt(:,2:end),'VariableNames',header(2:end),...
                                 'RowNames',txt(:,1))};
         varargout{1}.Properties.DimensionNames = {'Corner','Variable'};
