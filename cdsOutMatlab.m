@@ -1,0 +1,85 @@
+classdef cdsOutMatlab < hgsetget
+    %cdsOutMatlab Summary of this class goes here
+    %   Detailed explanation goes here
+    
+    properties
+        currentSimNum
+        analyses
+        data
+        info
+        Properties
+        %datasets
+        filepath
+    end
+    properties
+        analysisTypes = {'tran-tran'};
+    end
+    
+    methods
+        function obj = cdsOutMatlab(axlCurrentResultsPath,varargin)
+        %cdsOutMatlab Creates a new matlab output saving script
+            if(~isunix)
+                error('VirtuosoToolbox:cdsOutMatlab',...
+                      'This class is for use in a script that is ran as an output in ADEXL');
+            end
+            psfLocFolders = strsplit(axlCurrentResultsPath,filesep);
+            simNum = str2double(psfLocFolders{12});
+            obj.currentSimNum = simNum;
+            
+            % Basic Information
+            obj.info.psfPaths{simNum} = axlCurrentResultsPath;
+            obj.info.names.result{simNum} = psfLocFolders{11};
+            obj.info.names.user{simNum} = psfLocFolders{4};
+            obj.info.names.project{simNum} = psfLocFolders{5};
+            obj.info.names.library{simNum} = psfLocFolders{6};
+            obj.info.names.testBenchCell{simNum} = psfLocFolders{7};
+            obj.info.projectPath = strjoin({'','prj',obj.info.names.project{simNum}},filesep);
+            % Enable MATLAB log file
+            diary(fullfile(obj.info.projectPath,'doc','matlab.log'));
+
+            % Analyses
+            obj.info.datasets{simNum} = cds_srr(obj.info.psfPaths{simNum});
+            obj.analyses = intersect(obj.info.datasets{simNum},obj.analysisTypes);
+            if(~(length(obj.analyses) == 1))
+                error('VirtuosoToolbox:cdsOutMatlab',...
+                 'Does not support more than one analysis per test');
+            end
+%             workspace % View variables as they change
+%             commandwindow
+%             desktop % displays the desktop but can take a long time to
+%             open
+            obj.info.corners.psfPath = strjoin([psfLocFolders(1:11) 'psf' psfLocFolders(13) 'psf'],filesep);
+        end
+        function getAllProperties(obj)
+        % psf properties
+            obj.info.tranDatasets(obj.currentSimNum) = cds_srr(obj.info.psfPaths{obj.currentSimNum},'tran-tran');
+            properties = obj.info.tranDatasets(obj.currentSimNum).prop;
+            for i = 1:length(properties)
+                obj.info.properties.(regexprep(properties{i},'\(|\)|\.| ','')){obj.currentSimNum} = ...
+                cds_srr(obj.info.psfPaths{obj.currentSimNum},obj.analyses{1},properties{i});
+            end
+        end
+        function getAllPropertiesCorners(obj)
+        % Corners psf properties
+            obj.info.corners.tranDatasets(obj.currentSimNum) = cds_srr(obj.info.corners.psfPath,'tran-tran');
+            cornerProperties = obj.info.corners.tranDatasets(obj.currentSimNum).prop;
+            for i = 1:length(cornerProperties)
+                obj.info.corners.properties.(regexprep(cornerProperties{i},'\(|\)|\.| ','')){obj.currentSimNum} = ...
+                cds_srr(obj.info.corners.psfPath,'tran-tran',cornerProperties{i});
+            end
+        end
+        function save(obj,varargin)
+        % Save data
+            p = inputParser;
+            p.addOptional('filepath',[],@ischar);
+            p.parse(varargin{:});
+            obj.filepath = p.Results.filepath;
+            % Save
+            save(p.Results.filepath,'obj')
+            
+        end
+        
+    end
+    
+end
+
