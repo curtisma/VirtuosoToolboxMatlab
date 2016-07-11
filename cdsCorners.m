@@ -18,6 +18,7 @@ classdef cdsCorners < hgsetget
         description = ''
         testNames = {};
         testEnables = {};
+        cornersTable
     end
     properties (Dependent,GetAccess=private)
         tempStr % 
@@ -229,6 +230,9 @@ classdef cdsCorners < hgsetget
             temp_out = cellfun(@(y) strjoin(y,','),...
                        cellfun(@strtrim,temp_out,'UniformOutput',false),'UniformOutput',false); % Form each entry
             temp_out = cellfun(@(x) ['"' x '"'],temp_out,'UniformOutput',false);
+        end
+        function importVariables(obj,variablesTable)
+            
         end
     end
     methods(Static)
