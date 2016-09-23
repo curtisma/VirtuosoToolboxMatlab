@@ -19,8 +19,8 @@ classdef cdsOutMatlab < hgsetget
     end
     methods
         function obj = cdsOutMatlab(axlCurrentResultsPath,varargin)
-        %cdsOutMatlab Creates a new matlab output saving script
-        
+            %cdsOutMatlab Creates a new matlab output saving script
+            
 %         desktop
             if(~isunix)
                 error('VirtuosoToolbox:cdsOutMatlab',...
@@ -47,6 +47,13 @@ classdef cdsOutMatlab < hgsetget
             obj.info.names.library = psfLocFolders{6};
             obj.info.names.testBenchCell = psfLocFolders{7};
             obj.info.names.test = psfLocFolders{13};
+            
+            % Parse Inputs
+            p = inputParser;
+            p.addRequired('axlCurrentResultsPath',@ischar);
+            p.addParameter('transientSignals',[],@iscell);
+            p.parse(axlCurrentResultsPath,varargin{:});
+            obj.analyses.transient.waveformsList = p.Results.transientSignals;
             
             % Get netlist
             obj.info.netlistPath = strsplit(obj.info.psfPath,filesep);
@@ -136,6 +143,10 @@ classdef cdsOutMatlab < hgsetget
         end
         function getDataTransient(obj)
             obj.analyses.transient.info = cds_srr(obj.info.psfPath,'tran-tran');
+            % Save transient waveforms
+            for wfmNum = 1:length(obj.analyses.transient.waveformsList)
+                obj.analyses.transient.(obj.analyses.transient.waveformsList{wfmNum}) = cds_srr(obj.info.psfPath,'tran-tran',obj.analyses.transient.waveformsList{wfmNum});
+            end
         end
         function save(obj,varargin)
         % Save data
