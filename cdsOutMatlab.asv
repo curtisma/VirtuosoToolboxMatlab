@@ -175,10 +175,8 @@ classdef cdsOutMatlab < hgsetget
         function getDataTransient(obj)
             obj.analyses.transient.info = cds_srr(obj.paths.psf,'tran-tran');
             % Save transient waveforms
-            if(~isempty(obj.analyses.dc.waveformsList))
-                for wfmNum = 1:length(obj.analyses.transient.waveformsList)
-                    obj.analyses.transient.(obj.analyses.transient.waveformsList{wfmNum}) = cds_srr(obj.paths.psf,'tran-tran',obj.analyses.transient.waveformsList{wfmNum});
-                end
+            for wfmNum = 1:length(obj.analyses.transient.waveformsList)
+                obj.analyses.transient.(obj.analyses.transient.waveformsList{wfmNum}) = cds_srr(obj.paths.psf,'tran-tran',obj.analyses.transient.waveformsList{wfmNum});
             end
         end
         function getCornerName(obj)
