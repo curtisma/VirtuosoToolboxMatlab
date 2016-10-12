@@ -114,6 +114,15 @@ classdef cdsOutMatlab < hgsetget
             end
             
             obj.paths.psfPathCorners = strjoin([psfLocFolders(1:11) 'psf' psfLocFolders(13) 'psf'],filesep);
+            obj.paths.run = strjoin(psfLocFolders(1:11),filesep);
+            obj.paths.psfTmp = strjoin([psfLocFolders(1:10) ['.tmpADEDir_' obj.names.user] obj.names.test [obj.names.library '_' obj.names.testBenchCell '_schematic_spectre'] 'psf'],filesep);
+            obj.paths.runObjFile = strjoin({obj.paths.psfTmp 'runObjFile'},filesep);
+            obj.info.runObjFile = cdsOutMatlab.loadTextFile(obj.paths.runObjFile);
+            numCornerLineNum = strncmp('"Corner_num"',obj.info.runObjFile,12);
+            obj.info.numCorners = str2double(obj.info.runObjFile{numCornerLineNum}(13:end));
+            corners = {obj.info.runObjFile{find(numCornerLineNum)+1:find(numCornerLineNum)+obj.info.numCorners}};
+            obj.info.cornerNames = cellfun(@(x,y) x(y(3)+1:end-1),corners,strfind(corners,'"'),'UniformOutput',false);
+            obj.names.corner = obj.info.cornerNames{obj.simNum};
             obj.getCornerName;
             obj.filepath = [];
 %             obj.info.corners.runObjFile = cdsOutMatlab.loadTextFile(fullfile(obj.paths.psfPathCorners,'runObjFile'));
@@ -206,17 +215,21 @@ classdef cdsOutMatlab < hgsetget
         % OUTPUTS
         %  data - saved dataset table
         % see also: cdsOutMatlab
-            filePathProp = char(unique({obj.filepath}));
-            
             p = inputParser;
-            p.addOptional('filePath', filePathProp, @(x) ischar(x) || isempty(x));
+            p.addOptional('filePath', [], @(x) ischar(x) || isempty(x));
             p.addParameter('saveMode','append',@ischar);
             p.parse(varargin{:});
-            if(isempty(filePathProp))
-                [obj.filepath] = deal(p.Results.filePath);
-            end
             
-            if(isempty(char(unique({obj.filepath}))))
+            if(~isempty(p.Results.filePath))
+                [obj.filepath] = deal(p.Results.filePath);
+                filePath = p.Results.filePath;
+            elseif(~isempty({obj.filePath}))
+                filePath = char(unique({obj.filepath}));
+            else
+                filePath = [];
+            end
+                        
+            if(isempty(filePath))
                 [filename, pathname] = uiputfile({'*.mat','MAT-files (*.mat)'; ...
                 	'*.*',  'All Files (*.*)'},'Select file to save data');
                 if isequal(filename,0) || isequal(pathname,0)
@@ -227,7 +240,7 @@ classdef cdsOutMatlab < hgsetget
                 end
             end
             % Append to an existing file
-            obj(1).filepath
+%             obj(1).filepath
             
             % Save
             % MAT.Project.testBenchCell.Test = obj
@@ -253,6 +266,28 @@ classdef cdsOutMatlab < hgsetget
             end
         	signalOut = cds_srr( obj.paths.psf, cdsAnalysisName, signal);
             obj.data.(analysis).(signal) = signalOut;
+        end
+        function dir(obj,dirPath)
+            if(length(obj)>1)
+            	error('VirtuosoToolbox:cdsOutMatlab','Only run on a single corner of cdsOutMatlab, not all of them.');
+            end
+            if(~ischar(dirPath))
+                error('VirtuosoToolbox:cdsOutMatlab','The input must be a char path location or dir type');
+            end
+            pathList = fields(obj.paths);
+            pathNameIdx = strcmp(dirPath,pathList);
+            if(any(pathNameIdx))
+                dirName = pathList{pathNameIdx};
+                dirPath = obj.paths.(dirName);
+                pathDirs = strsplit(dirPath,{'/','\'});
+            else
+                pathDirs = strsplit(dirPath,{'/','\'});
+                dirName = pathDirs{end};
+            end
+            if(ispc && strcmp(pathDirs{1},''))
+                dirPath = ['R:' dirPath];
+            end
+                [obj.info.dir.(dirName)] = deal(dir(dirPath));
         end
     end
     methods (Static)
