@@ -1,202 +1,103 @@
-classdef cdsOutMatlab < hgsetget
-    %cdsOutMatlab Summary of this class goes here
-    %   Detailed explanation goes here
+classdef cdsOutMatlab < cdsOut
+    %cdsOutMatlab A Cadence Matlab output script
+    %   Creates a cadence MATLAB output script to handle the saving and
+    %   analysis of Cadence simulation results using MATLAB
+    %
+    % See also: cdsOutMatlab/cdsOutMatlab, cdsOutMatlab/save,
+    % cdsOutMatlab.load, cdsOutCorner, cdsOutRun,cdsOutTest
+    
     
     properties
-        simNum
-        analyses
+        results
         names
         paths
-        temp
-        processCorner
-        variables % sim variable values
-        info
-        netlist
-    end
-    properties (Access = private,Constant,Hidden)
-        analysisTypes = {'tran-tran','stb-stb','stb-margin.stb','dcOp-dc'};
+        runHistoryLength
     end
     properties (Transient = true)
         filepath
+        currentRun
+        currentTest
+        currentCorner
+        simDone
     end
     methods
-        function obj = cdsOutMatlab(axlCurrentResultsPath,varargin)
+        function obj = cdsOutMatlab(varargin)
         %cdsOutMatlab Creates a new matlab output saving script
-            
-            if(~isunix)
-                error('VirtuosoToolbox:cdsOutMatlab',...
-                      'This class is for use in a script that is ran as an output in ADEXL or in a unix MATLAB session');
-            end
-            psfLocFolders = strsplit(axlCurrentResultsPath,filesep);
-            
-            % Basic Information and log
-            obj.names.project = psfLocFolders{5};
-            obj.paths.project = char(strjoin({'','prj',obj.names.project},filesep));
-            obj.paths.doc = fullfile(obj.paths.project,'doc');
-            obj.paths.matlab = fullfile(obj.paths.doc,'matlab');
-            if(~isdir(obj.paths.matlab))
-                [log_success,log_msg,log_msgid] = mkdir(obj.paths.matlab);
-                if(~log_success)
-                    error(log_msgid,log_msg);
+            obj = obj@cdsOut(varargin{:}); % Superclass constructor
+            if((nargin > 1) && ischar(varargin{1}))
+                obj.paths.psfLocFolders = strsplit(varargin{1},filesep);
+                if(isunix && isdir(varargin{1}))
+                    obj.getNames(obj.paths.psfLocFolders);
+                    obj.getPaths;
+                    obj.startLog;
+                    obj.info.who = who;
                 end
             end
-            diary(fullfile(obj.paths.matlab,'matlab.log')); % Enable MATLAB log file
-            obj.simNum = str2double(psfLocFolders{12});
-            obj.paths.psf = char(axlCurrentResultsPath);
-            obj.names.result = psfLocFolders{11};
-            obj.names.user = psfLocFolders{4};
-            
-            obj.names.library = psfLocFolders{6};
-            obj.names.testBenchCell = psfLocFolders{7};
-            obj.names.test = psfLocFolders{13};
-            
-            % Parse Inputs
             p = inputParser;
-            %p.KeepUnmatched = true;
-            p.addRequired('axlCurrentResultsPath',@ischar);
+            p.KeepUnmatched = true;
+            p.addOptional('axlCurrentResultsPath','',@(x) ischar(x) && isdir(x));
             p.addParameter('signals',[],@iscell);
             p.addParameter('transientSignals',[],@iscell);
             p.addParameter('dcSignals',[],@iscell);
-            p.addParameter('desktop',false,@islogical);
-            p.parse(axlCurrentResultsPath,varargin{:});
-            if(~isempty(p.Results.transientSignals))
-                obj.analyses.transient.waveformsList = p.Results.transientSignals;
-            elseif(~isempty(p.Results.signals))
-                obj.analyses.transient.waveformsList = p.Results.signals;
+            p.addParameter('filepath',[],@ischar);
+            p.addParameter('runHistoryLength',10,@isdouble)
+            p.parse(varargin{:});
+            obj.filepath = p.Results.filepath;
+            obj.runHistoryLength = p.Results.runHistoryLength;
+            obj.results = cdsOutRun.empty;
+            
+            if(~isempty(p.Results.axlCurrentResultsPath))
+                obj.currentCorner = cdsOutCorner(varargin{:});
+                obj.addCorner(obj.currentCorner);
             end
-            if(~isempty(p.Results.dcSignals))
-                obj.analyses.dc.waveformsList = p.Results.dcSignals;
-            elseif(~isempty(p.Results.signals))
-                obj.analyses.dc.waveformsList = p.Results.signals;
+            
+        end
+        function addCorner(obj,corner)
+        	if(ischar(corner))
+            % Initialize corner
+            	corner = cdsOutCorner(corner);
             end
-            % start desktop (optional)
-            if(p.Results.desktop && ~desktop('-INUSE'))
-                desktop % displays the desktop but can take a long time to open
-                %workspace % View variables as they change
-                %commandwindow
+            if(~isa(corner,'cdsOutCorner'))
+                error('VirtuosoToolbox:cdsOutTest:addCorner','corner must be a cdsOutCorner');
             end
-            % Get netlist
-            obj.paths.netlist = strsplit(obj.paths.psf,filesep);
-            obj.paths.netlist = fullfile(char(strjoin(obj.paths.netlist(1:end-1),filesep)),'netlist', 'input.scs');
-            obj.netlist = cdsOutMatlab.loadTextFile(obj.paths.netlist);
-            % Get Spectre log file
-            obj.paths.spectreLog = fullfile(obj.paths.psf,'spectre.out');
-            obj.info.log = cdsOutMatlab.loadTextFile(obj.paths.spectreLog);
-            % Get the model information
-            obj.paths.modelFileInfo = strsplit(obj.paths.psf,filesep);
-            obj.paths.modelFileInfo = fullfile(char(strjoin(obj.paths.modelFileInfo(1:end-1),filesep)),'netlist', '.modelFiles');
-            obj.info.modelFileInfo = cdsOutMatlab.loadTextFile(obj.paths.modelFileInfo);
-            if(~isempty(obj.info.modelFileInfo) && (length(obj.info.modelFileInfo)==1))
-                obj.processCorner = obj.info.modelFileInfo{1}(strfind(obj.info.modelFileInfo{1},'section=')+8:end);
-            elseif(~isempty(obj.info.modelFileInfo))
-                obj.processCorner = 'NOM';
+            if(~isempty(obj.results))
+                resultIdx = strcmp({obj.results.name},corner.names.result);
+                resultNames = obj.results.names;
+                libIdx = strcmp({resultNames.library},corner.names.library);
+                if(~any(resultIdx & libIdx))
+                    result = obj.addResult;
+                elseif(sum(resultIdx & libIdx) == 1)
+                    result = obj.results(resultIdx & libIdx);
+                else
+                    error('VirtuosoToolbox:cdsOutTest:addCorner','corner belongs to multiple results');
+                end
             else
-                obj.processCorner = '';
+                result = obj.addResult;
             end
-            
-            % Load Analyses
-            obj.info.datasets = cds_srr(obj.paths.psf);
-            obj.info.availableAnalyses = intersect(obj.info.datasets,obj.analysisTypes);
-            obj.getVariables;
-            obj.temp = obj.variables.temp;
-            if(any(strcmp('stb-stb',obj.info.availableAnalyses)))
-                obj.getDataSTB;
-            end
-            if(any(strcmp('dc-dc',obj.info.availableAnalyses)))
-                obj.getDataDC;
-            end
-            
-            if(any(strcmp('tran-tran',obj.info.availableAnalyses)))
-                obj.getDataTransient;
-            end
-            if(any(strcmp('dcOp-dc',obj.info.availableAnalyses)))
-                obj.getDataDCop;
-            end
-            
-            obj.paths.psfPathCorners = strjoin([psfLocFolders(1:11) 'psf' psfLocFolders(13) 'psf'],filesep);
-            obj.paths.run = strjoin(psfLocFolders(1:11),filesep);
-            obj.paths.psfTmp = strjoin([psfLocFolders(1:10) ['.tmpADEDir_' obj.names.user] obj.names.test [obj.names.library '_' obj.names.testBenchCell '_schematic_spectre'] 'psf'],filesep);
-            obj.paths.runObjFile = strjoin({obj.paths.psfTmp 'runObjFile'},filesep);
-            obj.info.runObjFile = cdsOutMatlab.loadTextFile(obj.paths.runObjFile);
-            numCornerLineNum = strncmp('"Corner_num"',obj.info.runObjFile,12);
-            obj.info.numCorners = str2double(obj.info.runObjFile{numCornerLineNum}(13:end));
-            corners = {obj.info.runObjFile{find(numCornerLineNum)+1:find(numCornerLineNum)+obj.info.numCorners}};
-            obj.info.cornerNames = cellfun(@(x,y) x(y(3)+1:end-1),corners,strfind(corners,'"'),'UniformOutput',false);
-            obj.names.corner = obj.info.cornerNames{obj.simNum};
-            obj.getCornerName;
-            obj.filepath = [];
-%             obj.info.corners.runObjFile = cdsOutMatlab.loadTextFile(fullfile(obj.paths.psfPathCorners,'runObjFile'));
+            result.addCorner(corner);
         end
-        function getAllProperties(obj)
-        % psf properties
-            obj.info.tranDatasets = cds_srr(obj.paths.psf,'tran-tran');
-            properties = obj.info.tranDatasets.prop;
-            for i = 1:length(properties)
-                obj.info.properties.(regexprep(properties{i},'\(|\)|\.| ','')) = ...
-                cds_srr(obj.paths.psf,obj.info.availableAnalyses{1},properties{i});
-            end
-        end
-        function getAllPropertiesCorners(obj)
-        % Corners psf properties
-            obj.info.corners.tranDatasets = cds_srr(obj.paths.psfPathCorners,'tran-tran');
-            cornerProperties = obj.info.corners.tranDatasets.prop;
-            for i = 1:length(cornerProperties)
-                obj.info.corners.properties.(regexprep(cornerProperties{i},'\(|\)|\.| ','')) = ...
-                cds_srr(obj.paths.psfPathCorners,'tran-tran',cornerProperties{i});
-            end
-        end
-        function getVariables(obj)
-        % Gets the corner's variable data
-        %
-        % USE:
-        %  obj.getVariables;
-            obj.info.variables = cds_srr(obj.paths.psf,'variables');
-            varNames = cds_srr(obj.paths.psf,'variables');
-            varNames = varNames.variable;
-            for i = 1:length(varNames)
-                obj.info.variablesData.(regexprep(varNames{i}(1:end-6),'\(|\)|\.| ','')) = ...
-                cds_srr(obj.paths.psf,'variables',varNames{i});
-            end
-            obj.variables = obj.info.variablesData;
-        end
-        function getDataSTB(obj)
-        % Loads stability (stb) analysis data
-            obj.analyses.stb.phaseMargin = cds_srr(obj.paths.psf,'stb-margin.stb','phaseMargin');
-            obj.analyses.stb.gainMargin = cds_srr(obj.paths.psf,'stb-margin.stb','gainMargin');
-            obj.analyses.stb.loopGain = cds_srr(obj.paths.psf,'stb-stb','loopGain');
-            obj.analyses.stb.phaseMarginFrequency = cds_srr(obj.paths.psf,'stb-margin.stb','phaseMarginFreq');
-            obj.analyses.stb.gainMarginFrequency = cds_srr(obj.paths.psf,'stb-margin.stb','gainMarginFreq');
-            obj.analyses.stb.probe = cds_srr(obj.paths.psf,'stb-stb','probe');
-            obj.analyses.stb.info = cds_srr(obj.paths.psf,'stb-stb');
-            obj.analyses.stb.infoMargin = cds_srr(obj.paths.psf,'stb-margin.stb');
-        end
-        function getDataDC(obj)
-            obj.analyses.dc.info = cds_srr(obj.paths.psf,'dc-dc');
-            % Save transient waveforms
-            if(~isempty(obj.analyses.dc.waveformsList))
-                for wfmNum = 1:length(obj.analyses.dc.waveformsList)
-                    obj.analyses.transient.(obj.analyses.dc.waveformsList{wfmNum}) = cds_srr(obj.paths.psf,'tran-tran',obj.analyses.transient.waveformsList{wfmNum});
+        function result = addResult(obj,varargin)
+%             if(ischar(resultIn))
+%                 resultIn = cdsOutRun();
+%             elseif(isa(resultIn,'cdsOutRun'))
+%                 resultIn = 1;
+%             end
+%             resultIdx = strcmp(resultIn.name,{obj.results.name});
+%             if(isempty(resultIdx))
+            % Create new result
+                if(length(obj.results) < obj.runHistoryLength)
+                    result = cdsOutRun;
+                    obj.results(end+1) = result;
+                else
+                    result = cdsOutRun;
+                    obj.results = [obj.result(2:end-1) result];
                 end
-            end
-        end
-        function getDataDCop(obj)
-            obj.analyses.dcOp.info = cds_srr(obj.paths.psf,'dcOp-dc');
-        end
-        function getDataTransient(obj)
-            obj.analyses.transient.info = cds_srr(obj.paths.psf,'tran-tran');
-            % Save transient waveforms
-            if(~isempty(obj.analyses.dc.waveformsList))
-                for wfmNum = 1:length(obj.analyses.transient.waveformsList)
-                    obj.analyses.transient.(obj.analyses.transient.waveformsList{wfmNum}) = cds_srr(obj.paths.psf,'tran-tran',obj.analyses.transient.waveformsList{wfmNum});
-                end
-            end
-        end
-        function getCornerName(obj)
-        % Gets the name of the corner.  This name is set in the Cadence
-        % corner setup
-%         	obj.info.cornerRunFile = cdsOutMatlab.loadTextFile(fullfile(obj.paths.psfPathCorners,'runObjFile'));
-            obj.info.cornerRunFileDir = dir(obj.paths.psfPathCorners);
-%             obj.info.corners.numCorners = strfind(obj.info.cornerRunFile,'"Corner_num"');
+%             elseif(length(resultIdx) == 1)
+            % Replace existing result
+%                 obj.result(resultIdx) = resultIn;
+%             else
+%                 warning('VirtuosoToolbox:cdsOutMatlab:addResult','Duplicate results exist');
+%             end
         end
         function data = save(obj,varargin)
         % Save Saves the cdsOutMatlab dataset to a file
@@ -221,10 +122,10 @@ classdef cdsOutMatlab < hgsetget
             p.parse(varargin{:});
             
             if(~isempty(p.Results.filePath))
-                [obj.filepath] = deal(p.Results.filePath);
+                obj.filepath = p.Results.filePath;
                 filePath = p.Results.filePath;
             elseif(~isempty({obj.filePath}))
-                filePath = char(unique({obj.filepath}));
+                filePath = obj.filepath;
             else
                 filePath = [];
             end
@@ -244,50 +145,39 @@ classdef cdsOutMatlab < hgsetget
             
             % Save
             % MAT.Project.testBenchCell.Test = obj
-            library = unique(arrayfun(@(x) x.names.library,obj,'UniformOutput',false));
-            TBcell = unique(arrayfun(@(x) x.names.testBenchCell,obj,'UniformOutput',false));
-            test = unique(arrayfun(@(x) x.names.test,obj,'UniformOutput',false));
-            result = unique(arrayfun(@(x) x.names.result,obj,'UniformOutput',false));
-            result = regexprep(result,'\(|\)|\.| ','_');
-            data = table(obj,library,TBcell,test,result);
-            data.Properties.VariableNames = {'data','library','TBcell','test','result'};
+%             library = unique(arrayfun(@(x) x.names.library,obj,'UniformOutput',false));
+%             TBcell = unique(arrayfun(@(x) x.names.testBenchCell,obj,'UniformOutput',false));
+%             test = unique(arrayfun(@(x) x.names.test,obj,'UniformOutput',false));
+%             result = unique(arrayfun(@(x) x.names.result,obj,'UniformOutput',false));
+%             result = regexprep(result,'\(|\)|\.| ','_');
+%             data = table(obj,library,TBcell,test,result);
+%             data.Properties.VariableNames = {'data','library','TBcell','test','result'};
 %             MAT.(char(library)).(char(TBcell)).(char(test)).(char(result)) = obj;
-            save(obj(1).filepath,'data');
+            save(obj.filepath,'obj');
 %             save(obj(1).filepath,'MAT');
         end
-        function signalOut = loadSignal(obj,analysis,signal)
-            analysis = lower(analysis);
-            switch analysis
-                case {'transient','tran-tran','tran','trans'}
-                    cdsAnalysisName = 'tran-tran';
-                    analysis = 'transient';
-                otherwise
-                    warning('Wrong or unsupported analysis type');
-            end
-        	signalOut = cds_srr( obj.paths.psf, cdsAnalysisName, signal);
-            obj.data.(analysis).(signal) = signalOut;
-        end
-        function dir(obj,dirPath)
-            if(length(obj)>1)
-            	error('VirtuosoToolbox:cdsOutMatlab','Only run on a single corner of cdsOutMatlab, not all of them.');
-            end
-            if(~ischar(dirPath))
-                error('VirtuosoToolbox:cdsOutMatlab','The input must be a char path location or dir type');
-            end
-            pathList = fields(obj.paths);
-            pathNameIdx = strcmp(dirPath,pathList);
-            if(any(pathNameIdx))
-                dirName = pathList{pathNameIdx};
-                dirPath = obj.paths.(dirName);
-                pathDirs = strsplit(dirPath,{'/','\'});
+        function val = get.names(obj)
+            if(~isempty(obj.results))
+                val = obj.names;
+%                 val.lol = unique({obj.runs})
             else
-                pathDirs = strsplit(dirPath,{'/','\'});
-                dirName = pathDirs{end};
+                val = struct;
             end
-            if(ispc && strcmp(pathDirs{1},''))
-                dirPath = ['R:' dirPath];
+        end
+        function val = get.simDone(obj)
+            if(isempty(obj.results))
+                val = false;
+            else
+                % Check to make sure all the runs are complete
+                val = all([obj.results.simDone]);
             end
-                [obj.info.dir.(dirName)] = deal(dir(dirPath));
+        end
+        function getPaths(obj)
+            obj.paths.project = char(strjoin({'','prj',obj.names.project},filesep));
+            obj.paths.doc = fullfile(obj.paths.project,'doc');
+            obj.paths.matlab = fullfile(obj.paths.doc,'matlab');
+            obj.paths.runData = char(strjoin(obj.paths.psfLocFolders(1:11),filesep));
+%             obj.paths.testData = 
         end
     end
     methods (Static)
@@ -311,26 +201,12 @@ classdef cdsOutMatlab < hgsetget
         %  MAT.save(filePath)
         %
         % see also:
-            psfLocFolders = strsplit(axlCurrentResultsPath,filesep);
-            simNum = str2double(psfLocFolders{12});
-        end
-        function out = loadTextFile(path)
-        % loadTextFile Loads a text file located at the given path.
-        %  Returns a cell array with each line of the file a row in the
-        %  cell array.
-        %
-        %  textFileCell = loadTextFile(path)
-        %
-            [fid,errorMessage] = fopen(path,'r');
-            if(fid >0)
-                out = textscan(fid,'%s','Delimiter',sprintf('\n'));
-                out = out{1};
-                fclose(fid);
-            else
-                disp(errorMessage);
-                disp(['Could not open ' path  sprintf('\n') errorMessage]);
-                
-                out = '';
+            try
+                psfLocFolders = strsplit(char(axlCurrentResultsPath),filesep);
+                simNum = str2double(psfLocFolders{12});
+            catch ME
+                simNum = -1;
+                disp(ME)
             end
         end
         function data = load(varargin)
@@ -373,15 +249,15 @@ classdef cdsOutMatlab < hgsetget
             end
             if(ischar(filePath))
                 data = load(filePath);
-                data = data.data;
+                data = data.obj;
             elseif(iscell(filePath))
-                data = table;
+                data = cdsOutMatlab.empty;
                 for fileIdx = 1:length(filePath)
                     dataIn = load(filePath{fileIdx});
-                    data = [data;dataIn.data];
+                    data = [data dataIn.obj];
                 end
             else
-                data = table;
+                data = cdsOutMatlab.empty;
             end
 %             library = {};
 %             result = {};
@@ -424,6 +300,5 @@ classdef cdsOutMatlab < hgsetget
 %             end
         end
     end
-    
 end
 
