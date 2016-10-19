@@ -71,32 +71,7 @@ classdef cdsOut < hgsetget
                 out = '';
             end
         end
-        function logLoc = startLog(obj,varargin)
-        % Starts a log (diary) of the matlab output including warnings and
-        % errors.  Returns the location of the log.
-        %
-        % USAGE
-        %  logPath = startLog(obj,axlCurrentResultsPath)
-            if(nargin == 2)
-                psfLocFolders = strsplit(varargin{1},filesep);
-                obj.paths.matlab = char(strjoin({'','prj',psfLocFolders{5},'doc','matlab'},filesep));
-            end
-            if(isstruct(obj.paths) && ~isempty(obj.paths.matlab))
-                logLoc = obj.paths.matlab;
-                if(~isdir(logLoc))
-                    [log_success,log_msg,log_msgid] = mkdir(logLoc);
-                    if(~log_success)
-                        error(log_msgid,log_msg);
-                    end
-                end
-            else
-                logLoc = userpath;
-                if(ispc)
-                    logLoc = logLoc(1:end-1);
-                end
-            end
-            diary(fullfile(logLoc,'matlab.log')); % Enable MATLAB log file
-        end
+        
         function getPaths(obj)
             obj.paths.project = char(strjoin({'','prj',obj.names.project},filesep));
             obj.paths.doc = fullfile(obj.paths.project,'doc');
@@ -131,6 +106,31 @@ classdef cdsOut < hgsetget
                 %workspace % View variables as they change
                 %commandwindow
             end
+        end
+        function logLoc = startLog(varargin)
+        % Starts a log (diary) of the matlab output including warnings and
+        % errors.  Returns the location of the log.
+        %
+        % USAGE
+        %  logPath = startLog(obj,axlCurrentResultsPath)
+            if(nargin == 1)
+                psfLocFolders = strsplit(varargin{1},filesep);
+                logLoc = char(strjoin({'','prj',psfLocFolders{5},'doc','matlab'},filesep));
+            end
+            if(~isempty(logLoc))
+                if(~isdir(logLoc))
+                    [log_success,log_msg,log_msgid] = mkdir(logLoc);
+                    if(~log_success)
+                        error(log_msgid,log_msg);
+                    end
+                end
+            else
+                logLoc = userpath;
+                if(ispc)
+                    logLoc = logLoc(1:end-1);
+                end
+            end
+            diary(fullfile(logLoc,'matlab.log')); % Enable MATLAB log file
         end
     end
 end

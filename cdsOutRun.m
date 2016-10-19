@@ -37,10 +37,12 @@ classdef cdsOutRun < cdsOut
             p.addParameter('dcSignals',[],@iscell);
             p.addParameter('desktop',false,@islogical);
             p.parse(varargin{:});
-            obj.paths.matlab = [];
-            obj.startLog;
             if(ischar(p.Results.data) || isa(p.Results.data,'cdsOutCorner'))
-                obj.addCorner(p.Results.data);
+                if(nargin>1)
+                    obj.addCorner(p.Results.data,varargin{2:end});
+                else
+                    obj.addCorner(p.Results.data);
+                end
             elseif(isa(p.Results.data,'cdsOutTest'))
 %                 obj.paths.test = p.Results.data;
                 obj.tests = cdsOutTest.empty;
@@ -49,7 +51,7 @@ classdef cdsOutRun < cdsOut
             end
             obj.cornerDoneCnt = 0;
         end
-        function addCorner(obj,corner)
+        function addCorner(obj,corner,varargin)
             if(ischar(corner))
             % Initialize corner
                 corner = cdsOutCorner(corner);
@@ -72,9 +74,9 @@ classdef cdsOutRun < cdsOut
             % Find the corner's test or start a new one
             selTest = strcmp({obj.tests.name},corner.names.test);
             if(isempty(selTest))
-                obj.tests(end+1) = cdsOutTest(corner);
+                obj.tests(end+1) = cdsOutTest(corner,varargin{:});
             elseif(sum(selTest)==1)
-                obj.tests(selTest).addCorner(corner);
+                obj.tests(selTest).addCorner(corner,varargin{:});
             else
                 error('VirtuosoToolbox:cdsOutTest:setCorners','Multiple test matches found');
             end

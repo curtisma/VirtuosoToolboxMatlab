@@ -16,7 +16,7 @@ classdef cdsOutCorner < cdsOut
         result
     end
     properties (Access = private,Constant,Hidden)
-        analysisTypes = {'tran-tran','stb-stb','stb-margin.stb','dcOp-dc'};
+        analysisTypes = {'tran-tran','stb-stb','stb-margin.stb','dcOp-dc','dc-dc'};
     end
     
     methods
@@ -66,7 +66,7 @@ classdef cdsOutCorner < cdsOut
             end
             
             % Get files
-            if(nargin>1)
+            if(nargin>=1)
                 obj.getNetlist;
                 obj.getSpectreLog;
                 obj.getProcessCorner;
@@ -197,7 +197,7 @@ classdef cdsOutCorner < cdsOut
         function getDataDC(obj)
             obj.analyses.dc.info = cds_srr(obj.paths.psf,'dc-dc');
             % Save transient waveforms
-            if(~isempty(obj.analyses.dc.waveformsList))
+            if(isfield(obj.analyses,'dc') && isfield(obj.analyses.dc,'waveformsList') && ~isempty(obj.analyses.dc.waveformsList))
                 for wfmNum = 1:length(obj.analyses.dc.waveformsList)
                     obj.analyses.transient.(obj.analyses.dc.waveformsList{wfmNum}) = cds_srr(obj.paths.psf,'tran-tran',obj.analyses.transient.waveformsList{wfmNum});
                 end

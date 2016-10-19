@@ -28,8 +28,7 @@ classdef cdsOutMatlab < cdsOut
                 obj.paths.psfLocFolders = strsplit(varargin{1},filesep);
                 if(isunix && isdir(varargin{1}))
                     obj.getNames(obj.paths.psfLocFolders);
-                    obj.getPaths;
-                    obj.startLog;
+                    obj.getPaths;              
                     obj.info.who = who;
                 end
             end
@@ -48,11 +47,11 @@ classdef cdsOutMatlab < cdsOut
             
             if(~isempty(p.Results.axlCurrentResultsPath))
                 obj.currentCorner = cdsOutCorner(varargin{:});
-                obj.addCorner(obj.currentCorner);
+                obj.addCorner(obj.currentCorner,varargin{2:end});
             end
             
         end
-        function addCorner(obj,corner)
+        function addCorner(obj,corner,varargin)
         	if(ischar(corner))
             % Initialize corner
             	corner = cdsOutCorner(corner);
@@ -74,7 +73,7 @@ classdef cdsOutMatlab < cdsOut
             else
                 result = obj.addResult;
             end
-            result.addCorner(corner);
+            result.addCorner(corner,varargin{:});
         end
         function result = addResult(obj,varargin)
 %             if(ischar(resultIn))
@@ -99,7 +98,7 @@ classdef cdsOutMatlab < cdsOut
 %                 warning('VirtuosoToolbox:cdsOutMatlab:addResult','Duplicate results exist');
 %             end
         end
-        function data = save(obj,varargin)
+        function save(obj,varargin)
         % Save Saves the cdsOutMatlab dataset to a file
         %   The dataset is saved to a file which contains a table named 
         %   data containing the data in a column and the library name, test
@@ -130,14 +129,14 @@ classdef cdsOutMatlab < cdsOut
                 filePath = [];
             end
                         
-            if(isempty(filePath))
+            if(isempty(filePath) && ispc)
                 [filename, pathname] = uiputfile({'*.mat','MAT-files (*.mat)'; ...
                 	'*.*',  'All Files (*.*)'},'Select file to save data');
                 if isequal(filename,0) || isequal(pathname,0)
                     disp('User pressed cancel')
                     return;
                 else
-                    [obj.filepath] = deal(fullfile(pathname,filename));
+                    obj.filepath = fullfile(pathname,filename);
                 end
             end
             % Append to an existing file
@@ -297,6 +296,16 @@ classdef cdsOutMatlab < cdsOut
 %                     varargout = {data library cell test result};
 %                 otherwise
 %                     error('skyVer:cdsOutMatlab:load','Wrong number of outputs');
+%             end
+        end
+        function loadData(varargin)
+        % loadData Loads data from the Cadence database using MATLAB
+        %  
+        % 
+%         =dir(varargin{1})
+%         
+%             for cornerNum = 1:length()
+%                 
 %             end
         end
     end
