@@ -1,10 +1,11 @@
-classdef cdsOut < hgsetget
+classdef cdsOut < matlab.mixin.SetGet
     %UNTITLED3 Summary of this class goes here
     %   Detailed explanation goes here
     
     properties
         name
         info
+        
     end
     properties (Abstract)
         names
@@ -71,12 +72,26 @@ classdef cdsOut < hgsetget
                 out = '';
             end
         end
-        
         function getPaths(obj)
             obj.paths.project = char(strjoin({'','prj',obj.names.project},filesep));
             obj.paths.doc = fullfile(obj.paths.project,'doc');
             obj.paths.matlab = fullfile(obj.paths.doc,'matlab');
             obj.paths.runData = char(strjoin(obj.paths.psfLocFolders(1:11),filesep));
+        end
+        function corner = addCorner(obj,corner,varargin)
+            if(ischar(corner))
+            % Initialize corner
+                if(nargin == 2)
+                    corner = cdsOutCorner(corner);
+                elseif(nargin>2)
+                    corner = cdsOutCorner(corner,varargin{:});
+                else
+                    error('VirtuosoToolbox:cdsOutMatlab:addCorner','Not enough inputs')
+                end
+            end
+            if(~isa(corner,'cdsOutCorner'))
+                error('VirtuosoToolbox:cdsOutTest:addCorner','corner must be a cdsOutCorner');
+            end
         end
     end
     methods (Static)

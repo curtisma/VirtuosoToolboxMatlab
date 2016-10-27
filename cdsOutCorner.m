@@ -14,6 +14,9 @@ classdef cdsOutCorner < cdsOut
         paths
         test
         result
+        process
+    end
+    properties (Dependent)
     end
     properties (Access = private,Constant,Hidden)
         analysisTypes = {'tran-tran','stb-stb','stb-margin.stb','dcOp-dc','dc-dc'};
@@ -52,8 +55,10 @@ classdef cdsOutCorner < cdsOut
             p.addParameter('transientSignals',[],@iscell);
             p.addParameter('dcSignals',[],@iscell);
             p.addParameter('desktop',false,@islogical);
+            p.addParameter('process',cdsProcess.empty);
 %             p.addParameter('test',@islogical);
             p.parse(varargin{:});
+            obj.process = p.Results.process;
             if(~isempty(p.Results.transientSignals))
                 obj.analyses.transient.waveformsList = p.Results.transientSignals;
             elseif(~isempty(p.Results.signals))
@@ -98,18 +103,38 @@ classdef cdsOutCorner < cdsOut
         	signalOut = cds_srr( obj.paths.psf, cdsAnalysisName, signal);
             obj.data.(analysis).(signal) = signalOut;
         end
-        function getAllProperties(obj,analysis)
+        function getAnalysisProperties(obj,analysis)
         % get all the properties of an analysis
         %
         % USE
-        %  obj.getAllProperties(analysis);
+        %  obj.getAnalysisProperties(analysis);
         %   places the properties in the analysis's struct
         %
-            obj.analyses.(analysis).properties.list = cds_srr(obj.paths.psf,analysis);
-            properties = obj.analyses.(analysis).properties.list.prop;
+            obj.analyses.(obj.analysisName(analysis)).properties.list = cds_srr(obj.paths.psf,analysis);
+            properties = obj.analyses.(obj.analysisName(analysis)).properties.list.prop;
             for i = 1:length(properties)
-                obj.analyses.(analysis).properties.(regexprep(properties{i},'\(|\)|\.| ','')) = ...
+                obj.analyses.(obj.analysisName(analysis)).properties.(regexprep(properties{i},'\(|\)|\.| ','')) = ...
                 cds_srr(obj.paths.psf,analysis,properties{i});
+            end
+        end
+        function getDatasetProperties(obj,dataset)
+        % get all the properties of an analysis
+        %
+        % USE
+        %  obj.getAnalysisProperties(analysis);
+        %   places the properties in the analysis's struct
+        %
+            if(~isfield(obj.info,'datasetProperties'))
+                obj.info.datasetProperties = struct;
+            end
+            if(~isfield(obj.info.datasetProperties,dataset))
+                obj.info.datasetProperties.(datset) = struct;
+            end
+            obj.info.datsetProperties.(datset).list = cds_srr(obj.paths.psf,dataset);
+            properties = obj.info.datsetProperties.(datset).list.prop;
+            for i = 1:length(properties)
+                obj.info.datsetProperties.(datset).(regexprep(properties{i},'\(|\)|\.| ','')) = ...
+                cds_srr(obj.paths.psf,dataset,properties{i});
             end
         end
         function loadAnalyses(obj)
@@ -209,7 +234,9 @@ classdef cdsOutCorner < cdsOut
         function getDataTransient(obj)
             obj.analyses.transient.info = cds_srr(obj.paths.psf,'tran-tran');
             % Save transient waveforms
-            if(~isempty(obj.analyses.dc.waveformsList))
+            
+            if(isfield(obj.analyses.transient,'waveformsList') && ...
+               ~isempty(obj.analyses.transient.waveformsList))
                 for wfmNum = 1:length(obj.analyses.transient.waveformsList)
                     obj.analyses.transient.(obj.analyses.transient.waveformsList{wfmNum}) = cds_srr(obj.paths.psf,'tran-tran',obj.analyses.transient.waveformsList{wfmNum});
                 end
@@ -224,6 +251,35 @@ classdef cdsOutCorner < cdsOut
 %                 error('VirtuosoToolbox:cdsOutCorner:set_test','test does not match the test of this corner')
 %             end
             obj.test = val;
+        end
+        function set.process(obj,val)
+            if(ischar(val))
+                val = processes.(val);
+            end
+            if(~isa(val,'cdsProcess'))
+                error('VirtuosoToolbox:cdsOutRun:setProcess','Process must be subclassed from cdsProcess')
+            end
+            obj.process = val;
+        end
+        function fieldName = analysisName(obj,analysis)
+        % Gives the actual field name in the analysis property when an
+        % analysis name is given
+        %
+        % USAGE
+        %  fieldName = obj.analysisName(analysis)
+        %
+        % See also: cdsOutCorner
+            switch analysis
+                case {'dc','dc-dc'}
+                    fieldName = 'dc';
+                case 'stb-stb'
+                    fieldName = 'stb';
+                case {'dcOp','dcOp-dc'}
+                    fieldName = 'dcOp';
+                otherwise
+                    error('VirtuosoToolbox:cdsOutCorner:analysisName',...
+                          'Analysis not defined');
+            end
         end
     end
     methods (Static)
