@@ -15,7 +15,6 @@ classdef cdsOutCorner < cdsOut
         test
         result
         process
-        signals
     end
     properties (Dependent)
     end
@@ -65,14 +64,13 @@ classdef cdsOutCorner < cdsOut
 %             elseif(~isempty(p.Results.signals))
 %                 obj.analyses.transient.waveformsList = p.Results.signals;
 %             end
-%             if(~isempty(p.Results.dcSignals))
-%                 obj.info.dc.signalList =
-%                 obj.info.dc.waveformsList = p.Results.dcSignals;
-%             elseif(~isempty(p.Results.signals))
-%                 obj.info.dc.signalList
-%                 obj.info.dc.signalList = p.Results.signals;
-%             end
-            obj.signals = p.Results.signals;
+            if(~isempty(p.Results.dcSignals))
+                obj.info.dc.signalList =
+                obj.info.dc.waveformsList = p.Results.dcSignals;
+            elseif(~isempty(p.Results.signals))
+                obj.info.dc.signalList
+                obj.info.dc.signalList = p.Results.signals;
+            end
             
             % Get files
             if(nargin>=1)
@@ -148,7 +146,7 @@ classdef cdsOutCorner < cdsOut
                 obj.getDataSTB;
             end
             if(any(strcmp(analyses.DC.cdsName,obj.info.availableAnalyses)))
-                obj.analyses.dc = analyses.DC(obj,'signals',obj.signals);
+                obj.analyses.dc = analyses.DC(obj,'signals',obj.signalList);
             end
             
             if(any(strcmp('tran-tran',obj.info.availableAnalyses)))

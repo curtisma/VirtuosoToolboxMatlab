@@ -142,7 +142,7 @@ classdef cdsOutTest < cdsOut
                     simNum = regexp(obj.info.runObjFile,'"dataDir" "(?:\.\./)+(.*/)','tokens');
                     simNum = simNum(cellfun(@(x) ~isempty(x),simNum));
                     simNum = cellfun(@(x) str2double(x{1}{1}(1:end-1)),simNum);
-%                     [~,simNumOrderedIdx] = sort(simNum);
+                    [~,simNumOrderedIdx] = sort(simNum);
                     cornerNames = regexp(obj.info.runObjFile,'"Corner" "(.*)"','tokens');
                     cornerNames = cornerNames(cellfun(@(x) ~isempty(x),cornerNames));
                     cornerNames = cellfun(@(x) char(x{1}),cornerNames,'UniformOutput',false);
@@ -176,25 +176,18 @@ classdef cdsOutTest < cdsOut
         function val = get.analysisNames(obj)
             val = fieldnames(obj.corners(1).analyses);
         end
-        function analysis = getAnalysis(obj,analysisName)
-            analyses = [obj.corners.analyses];
-        	analysis= [analyses.(analysisName)];
-        end
         function dataTable = getDataTable(obj,varargin)
             dataTable = table([obj.corners.temp]',{obj.corners.processCorner}');
             dataTable.Properties.VariableNames = {'temp', 'process'};
             dataTable.Properties.DimensionNames = {'Corner','Variables'};
-            vars = [obj.corners.variables];
-            if(~isempty(obj.process))
-                variableNames = setdiff(fieldnames(vars),[obj.process.variableNames {'temp'}]);
+            if(~isempty(obj.process)
+                variableNames = setdiff(fieldnames([obj.corners.variables]),obj.process.variableNames);
             else
-                variableNames = fieldnames(vars);
+                variableNames = fieldnames([obj.corners.variables]);
             end
-            varVal = struct;
             for varIdx = 1:length(variableNames)
-                varVal.(variableNames{varIdx}) = [vars.(variableNames{varIdx})]';
+                varVal = obj.corners.variables.(variableNames(varIdx))
             end
-            dataTable = [dataTable struct2table(varVal)];
             dataTable.Properties.RowNames = {obj.corners.name};
         end
         function set.process(obj,val)

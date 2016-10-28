@@ -1,90 +1,351 @@
-classdef cdsOutMatlab < hgsetget
-    %cdsOutMatlab Summary of this class goes here
-    %   Detailed explanation goes here
+classdef cdsOutMatlab < cdsOut
+    %cdsOutMatlab A Cadence Matlab output script
+    %   Creates a cadence MATLAB output script to handle the saving and
+    %   analysis of Cadence simulation results using MATLAB
+    %
+    % See also: cdsOutMatlab/cdsOutMatlab, cdsOutMatlab/save,
+    % cdsOutMatlab.load, cdsOutCorner, cdsOutRun,cdsOutTest
+    
     
     properties
-        currentSimNum
-        analyses
-        data
-        info
-        Properties
-        %datasets
+        results
+        names
+        paths
+        runHistoryLength
+    end
+    properties (Transient = true)
         filepath
+        currentResult
+        currentTest
+        currentCorner
+        simDone
     end
-    properties
-        analysisTypes = {'tran-tran'};
+    properties (Dependent)
+        CR
     end
-    
     methods
-        function obj = cdsOutMatlab(axlCurrentResultsPath,varargin)
+        function obj = cdsOutMatlab(varargin)
         %cdsOutMatlab Creates a new matlab output saving script
-            if(~isunix)
-                error('VirtuosoToolbox:cdsOutMatlab',...
-                      'This class is for use in a script that is ran as an output in ADEXL');
+            obj = obj@cdsOut(varargin{:}); % Superclass constructor
+            if((nargin > 1) && ischar(varargin{1}))
+                obj.paths.psfLocFolders = strsplit(varargin{1},filesep);
+                if(isunix && isdir(varargin{1}))
+                    obj.getNames(obj.paths.psfLocFolders);
+                    obj.getPaths;
+                    obj.info.who = who;
+                end
             end
-            psfLocFolders = strsplit(axlCurrentResultsPath,filesep);
-            simNum = str2double(psfLocFolders{12});
-            obj.currentSimNum = simNum;
-            
-            % Basic Information
-            obj.info.psfPaths{simNum} = axlCurrentResultsPath;
-            obj.info.names.result{simNum} = psfLocFolders{11};
-            obj.info.names.user{simNum} = psfLocFolders{4};
-            obj.info.names.project{simNum} = psfLocFolders{5};
-            obj.info.names.library{simNum} = psfLocFolders{6};
-            obj.info.names.testBenchCell{simNum} = psfLocFolders{7};
-            obj.info.projectPath = strjoin({'','prj',obj.info.names.project{simNum}},filesep);
-            % Enable MATLAB log file
-            diary(fullfile(obj.info.projectPath,'doc','matlab.log'));
-
-            % Analyses
-            obj.info.datasets{simNum} = cds_srr(obj.info.psfPaths{simNum});
-            obj.analyses = intersect(obj.info.datasets{simNum},obj.analysisTypes);
-            if(~(length(obj.analyses) == 1))
-                error('VirtuosoToolbox:cdsOutMatlab',...
-                 'Does not support more than one analysis per test');
-            end
-%             workspace % View variables as they change
-%             commandwindow
-%             desktop % displays the desktop but can take a long time to
-%             open
-            obj.info.corners.psfPath = strjoin([psfLocFolders(1:11) 'psf' psfLocFolders(13) 'psf'],filesep);
-        end
-        function getAllProperties(obj)
-        % psf properties
-            obj.info.tranDatasets(obj.currentSimNum) = cds_srr(obj.info.psfPaths{obj.currentSimNum},'tran-tran');
-            properties = obj.info.tranDatasets(obj.currentSimNum).prop;
-            for i = 1:length(properties)
-                obj.info.properties.(regexprep(properties{i},'\(|\)|\.| ','')){obj.currentSimNum} = ...
-                cds_srr(obj.info.psfPaths{obj.currentSimNum},obj.analyses{1},properties{i});
-            end
-        end
-        function getAllPropertiesCorners(obj)
-        % Corners psf properties
-            obj.info.corners.tranDatasets(obj.currentSimNum) = cds_srr(obj.info.corners.psfPath,'tran-tran');
-            cornerProperties = obj.info.corners.tranDatasets(obj.currentSimNum).prop;
-            for i = 1:length(cornerProperties)
-                obj.info.corners.properties.(regexprep(cornerProperties{i},'\(|\)|\.| ','')){obj.currentSimNum} = ...
-                cds_srr(obj.info.corners.psfPath,'tran-tran',cornerProperties{i});
-            end
-        end
-        function save(obj,varargin)
-        % Save data
             p = inputParser;
-            p.addOptional('filepath',[],@ischar);
+            p.KeepUnmatched = true;
+            p.addOptional('axlCurrentResultsPath','',@(x) ischar(x) && isdir(x));
+            p.addParameter('signals',[],@iscell);
+            p.addParameter('transientSignals',[],@iscell);
+            p.addParameter('dcSignals',[],@iscell);
+            p.addParameter('filepath',[],@ischar);
+            p.addParameter('runHistoryLength',10,@isdouble)
             p.parse(varargin{:});
             obj.filepath = p.Results.filepath;
-            % Save
-            save(p.Results.filepath,'obj')
+            obj.runHistoryLength = p.Results.runHistoryLength;
+            obj.results = cdsOutRun.empty;
+            
+            if(~isempty(p.Results.axlCurrentResultsPath))
+                obj.currentCorner = cdsOutCorner(varargin{:});
+                obj.addCorner(obj.currentCorner,varargin{2:end});
+            end
             
         end
-        
+        function addCorner(obj,corner,varargin)
+        	if(ischar(corner))
+            % Initialize corner
+                if(nargin == 2)
+                    corner = cdsOutCorner(corner);
+                elseif(nargin>2)
+                    corner = cdsOutCorner(corner,varargin{:});
+                else
+                    error('VirtuosoToolbox:cdsOutMatlab:addCorner','Not enough inputs')
+                end
+            end
+            if(~isa(corner,'cdsOutCorner'))
+                error('VirtuosoToolbox:cdsOutTest:addCorner','corner must be a cdsOutCorner');
+            end
+            if(~isempty(obj.results))
+                resultIdx = strcmp({obj.results.name},corner.names.result);
+                resultNames = obj.results.names;
+                libIdx = strcmp({resultNames.library},corner.names.library);
+                if(~any(resultIdx & libIdx))
+                    result = obj.addResult;
+                elseif(sum(resultIdx & libIdx) == 1)
+                    result = obj.results(resultIdx & libIdx);
+                else
+                    error('VirtuosoToolbox:cdsOutTest:addCorner','corner belongs to multiple results');
+                end
+            else
+                result = obj.addResult;
+            end
+            result.addCorner(corner,varargin{:});
+        end
+        function result = addResult(obj,varargin)
+%             if(ischar(resultIn))
+%                 resultIn = cdsOutRun();
+%             elseif(isa(resultIn,'cdsOutRun'))
+%                 resultIn = 1;
+%             end
+%             resultIdx = strcmp(resultIn.name,{obj.results.name});
+%             if(isempty(resultIdx))
+            % Create new result
+                if(length(obj.results) < obj.runHistoryLength)
+                    result = cdsOutRun;
+                    obj.results(end+1) = result;
+                else
+                    result = cdsOutRun;
+                    obj.results = [obj.result(2:end-1) result];
+                end
+%             elseif(length(resultIdx) == 1)
+            % Replace existing result
+%                 obj.result(resultIdx) = resultIn;
+%             else
+%                 warning('VirtuosoToolbox:cdsOutMatlab:addResult','Duplicate results exist');
+%             end
+        end
+        function save(obj,varargin)
+        % Save Saves the cdsOutMatlab dataset to a file
+        %   The dataset is saved to a file which contains a table named 
+        %   data containing the data in a column and the library name, test
+        %   bench cell name (TBcell), test name, and result name.
+        % 
+        %  Each dataset should only contain a single result
+        %
+        % USAGE
+        %  data = MAT.save(filePath)
+        % INPUTS
+        %  filePath - file path to save the file. (optional) 
+        %  If unspecified the dataset's current filePath is used.
+        %  If specified the dataset's filepath property is set to filePath
+        % OUTPUTS
+        %  data - saved dataset table
+        % see also: cdsOutMatlab
+            p = inputParser;
+            p.addOptional('filePath', [], @(x) ischar(x) || isempty(x));
+            p.addParameter('saveMode','append',@ischar);
+            p.parse(varargin{:});
+            
+            if(~isempty(p.Results.filePath))
+                obj.filepath = p.Results.filePath;
+                filePath = p.Results.filePath;
+            elseif(~isempty({obj.filePath}))
+                filePath = obj.filepath;
+            else
+                filePath = [];
+            end
+                        
+            if(isempty(filePath) && ispc)
+                [filename, pathname] = uiputfile({'*.mat','MAT-files (*.mat)'; ...
+                	'*.*',  'All Files (*.*)'},'Select file to save data');
+                if isequal(filename,0) || isequal(pathname,0)
+                    disp('User pressed cancel')
+                    return;
+                else
+                    obj.filepath = fullfile(pathname,filename);
+                end
+            end
+            % Append to an existing file
+%             obj(1).filepath
+            
+            % Save
+            % MAT.Project.testBenchCell.Test = obj
+%             library = unique(arrayfun(@(x) x.names.library,obj,'UniformOutput',false));
+%             TBcell = unique(arrayfun(@(x) x.names.testBenchCell,obj,'UniformOutput',false));
+%             test = unique(arrayfun(@(x) x.names.test,obj,'UniformOutput',false));
+%             result = unique(arrayfun(@(x) x.names.result,obj,'UniformOutput',false));
+%             result = regexprep(result,'\(|\)|\.| ','_');
+%             data = table(obj,library,TBcell,test,result);
+%             data.Properties.VariableNames = {'data','library','TBcell','test','result'};
+%             MAT.(char(library)).(char(TBcell)).(char(test)).(char(result)) = obj;
+            save(obj.filepath,'obj');
+%             save(obj(1).filepath,'MAT');
+        end
+        function val = get.names(obj)
+            if(~isempty(obj.results))
+                val = obj.names;
+%                 val.lol = unique({obj.runs})
+            else
+                val = struct;
+            end
+        end
+        function val = get.simDone(obj)
+            if(isempty(obj.results))
+                val = false;
+            else
+                % Check to make sure all the runs are complete
+                val = all([obj.results.simDone]);
+            end
+        end
+        function result = get.CR(obj)
+            if(~isempty(obj.currentResult))
+                result = obj.currentResult;
+            elseif(~isempty(obj.results))
+                result = obj.results(end);
+            else
+                result = cdsOutRun.empty;
+            end
+        end
+        function getPaths(obj)
+            obj.paths.project = char(strjoin({'','prj',obj.names.project},filesep));
+            obj.paths.doc = fullfile(obj.paths.project,'doc');
+            obj.paths.matlab = fullfile(obj.paths.doc,'matlab');
+            obj.paths.runData = char(strjoin(obj.paths.psfLocFolders(1:11),filesep));
+%             obj.paths.testData = 
+        end
     end
     methods (Static)
-        functiosimNum=getSimNum(
-            psfLocFolders = strsplit(axlCurrentResultsPath,filesep);
-            simNum = str2double(psfLocFolders{12});
+        function simNum = getSimNum(axlCurrentResultsPath)
+        % getSimNum Provides the sin number for each corner.  This is 
+        %  useful for saving each corner to a seperate cdsOutMatlab object
+        %  and then returning to adexl by using the Results variable to show
+        %  the correspondence between the adexl corner names and the sim
+        %  number
+        %
+        % INPUTS
+        %  axlCurrentResultsPath - Path to the psf folder containing the
+        %   simulation results for a given corner.  This variable is
+        %   provided in the workspace by adexl.
+        % OUTPUTS
+        %  simNum - Simulation number assigned that is assigned to each
+        %   corner.
+        % EXAMPLE
+        %  Results = cdsOutMatlab.getSimNum(axlCurrentResultsPath);
+        %  MAT(Results) = cdsOutMatlab.getSimNum(axlCurrentResultsPath);
+        %  MAT.save(filePath)
+        %
+        % see also:
+            try
+                psfLocFolders = strsplit(char(axlCurrentResultsPath),filesep);
+                simNum = str2double(psfLocFolders{12});
+            catch ME
+                simNum = -1;
+                disp(ME)
+            end
+        end
+        function data = load(varargin)
+        %load Loads a saved datafile
+        %
+        % USAGE
+        %  data = cdsOutMatlab.load(filePath);
+        %
+        % see also: cdsOutMatlab/save
+        % USAGE
+        %  data = cdsOutMatlab.load(filePath);
+        % INPUTS
+        %  filePath - a single file path or a cell array of paths to load
+        % Outputs
+        %  data - dataset table containing the following columns: data, 
+        %   library name, test bench cell name (TBcell), test name, and 
+        %   result name.
+        %
+        % see also: cdsOutMatlab/save
+            p = inputParser;
+            p.addOptional('filepath',[],@(x) ischar(x) || iscell(x));
+%             p.addParameter('tableOut',false,@islogical);
+            p.parse(varargin{:});
+            if(isempty(p.Results.filepath))
+                [filename, pathname] = uigetfile({'*.mat','MAT-files (*.mat)'; ...
+                	'*.*',  'All Files (*.*)'},'Select file to save data',...
+                    'MultiSelect', 'on');
+                if isequal(filename,0) || isequal(pathname,0)
+                    disp('User pressed cancel')
+                    return;
+                else
+                    if(iscell(filename))
+                        cellfun(@(x,y) fullfile(x,y),pathname,filename);
+                    else
+                        filePath = fullfile(pathname,filename);
+                    end
+                end
+            else
+                filePath = p.Results.filepath;
+            end
+            if(ischar(filePath))
+                data = load(filePath);
+                data = data.obj;
+            elseif(iscell(filePath))
+                data = cdsOutMatlab.empty;
+                for fileIdx = 1:length(filePath)
+                    dataIn = load(filePath{fileIdx});
+                    data = [data dataIn.obj];
+                end
+            else
+                data = cdsOutMatlab.empty;
+            end
+%             library = {};
+%             result = {};
+%             cell = {};
+%             test = {};
+%             libs = fieldnames(MAT);
+%             for libIdx = 1:length(libs)
+%                 testBenches = fieldnames(MAT.(libs{libIdx}));
+%                 for testBenchIdx = 1:length(testBenches)
+%                     tests = fieldnames(MAT.(libs{libIdx}).(testBenches{testBenchIdx}));
+%                     for testIdx = 1:length(tests)
+%                         res = fieldnames(MAT.(libs{libIdx}).(testBenches{testBenchIdx}).(tests{testIdx}));
+%                         [result{end+1:end+length(res)}] = deal(char(res));
+%                         [library{end+1:end+length(res)}] = deal(char(libs{libIdx}));
+%                         [cell{end+1:end+length(res)}] = deal(char(testBenches{testBenchIdx}));
+%                         [test{end+1:end+length(res)}] = deal(char(tests{testIdx}));
+%                         data = struct2cell(MAT.(libs{libIdx}).(testBenches{testBenchIdx}).(test{testIdx}));
+%                         data = [data{:}];
+%                     end
+%                 end
+%             end
+%             switch nargout
+%                 case {0,1}
+%                     if(p.Results.tableOut)
+%                         varargout = {table(data, library', cell', test', result')};
+%                         varargout{1}.Properties.VariableNames = {'data', 'library', 'cell', 'test', 'result'};
+%                     else
+%                         varargout = {data};
+%                     end
+%                 case 2
+%                     varargout = {data result};
+%                 case 3
+%                     varargout = {data test result};
+%                 case 4
+%                     varargout = {data cell test result};
+%                 case 5
+%                     varargout = {data library cell test result};
+%                 otherwise
+%                     error('skyVer:cdsOutMatlab:load','Wrong number of outputs');
+%             end
+        end
+        function out = loadData(varargin)
+        % loadData Loads data from the Cadence database using MATLAB
+        %  
+        % USAGE
+        %  obj = cdsOutMatlab.loadData(resultDir,...)
+        % INPUTS
+        %  resultsDir - test results directory
+        %
+            resultDir = dir(varargin{1});
+            resultDir = str2double({resultDir.name});
+            resultDir = resultDir(~isnan(resultDir));
+            out = cdsOutMatlab.empty;
+            for cornerNum = 1:length(resultDir)
+                testName = dir(fullfile(varargin{1},num2str(resultDir(cornerNum))));
+                testName = {testName.name};
+                testName = testName(3:end);
+                for testNum = 1:length(testName)
+                    cornerPSFpath = fullfile(varargin{1},num2str(resultDir(cornerNum)),testName{testNum},'psf');
+                    if(isempty(out))
+                        out = cdsOutMatlab(cornerPSFpath);
+                    else
+                        if(nargin ==1)
+                            out.addCorner(cornerPSFpath);
+                        elseif(nargin >1)
+                            out.addCorner(cornerPSFpath,varargin{2:end});
+                        end
+                    end
+                end
+            end
+        end
     end
-    
 end
 
