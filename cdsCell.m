@@ -12,7 +12,7 @@ classdef cdsCell < matlab.mixin.SetGet
     properties
         name
         library
-%         pinout
+        pinout
     end
     
     methods
@@ -21,7 +21,7 @@ classdef cdsCell < matlab.mixin.SetGet
             p.KeepUnmatched = true;
             p.addRequired('name',@ischar);
             p.addParameter('library','',@(x) ischar(x) || isa(x,'cdsLibrary'));
-%             p.addParameter('pinout',@isa(
+            p.addParameter('pinout',skyPinout.empty,@(x) isa(x,'skyPinout'));
             p.parse(name,varargin{:});
             
             obj.name = name;
