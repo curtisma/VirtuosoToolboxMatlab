@@ -48,9 +48,14 @@ classdef cdsOutRun < cdsOut
             p.addParameter('dcSignals',[],@iscell);
             p.addParameter('desktop',false,@islogical);
             p.addParameter('process',processes.GENERIC.empty);
+            p.addParameter('loadData',false,@islogical)
             p.parse(varargin{:});
             
-            if(ischar(p.Results.data) || isa(p.Results.data,'cdsOutCorner'))
+            % Load a full result if using the loadData option
+            if(p.Results.loadData && ~isempty(p.Results.data))
+            	obj.loadData(varargin{:})
+            % Normal corner path
+            elseif(ischar(p.Results.data) || isa(p.Results.data,'cdsOutCorner'))
                 if(nargin>1)
                     corner = obj.addCorner(p.Results.data,varargin{2:end});
                 else
@@ -92,6 +97,40 @@ classdef cdsOutRun < cdsOut
                 error('VirtuosoToolbox:cdsOutTest:setCorners','Multiple test matches found');
             end
             obj.process = corner.process;
+        end
+        function loadData(obj,varargin)
+        % loadData Loads data from the Cadence database using MATLAB.
+        %  Results are unique according to their library and result names.
+        %  
+        % USAGE
+        %  obj.loadData(resultDir,...)
+        % INPUTS
+        %  resultsDir - results directory containing a numbered folder for
+        %               each corner sim number and a psf directory
+        % Parameters
+        %  Any cdsOutCorner parameters
+        %
+        % See also: cdsOutCorner
+            resultDir = dir(varargin{1});
+            resultDir = str2double({resultDir.name});
+            resultDir = resultDir(~isnan(resultDir));
+            if(isempty(resultDir))
+                warning(['Data unavailable for:' varargin{1}]);
+            end
+%             out = cdsOutMatlab.empty;
+            for cornerNum = 1:length(resultDir)
+                testName = dir(fullfile(varargin{1},num2str(resultDir(cornerNum))));
+                testName = {testName.name};
+                testName = testName(3:end);
+                for testNum = 1:length(testName)
+                    cornerPSFpath = fullfile(varargin{1},num2str(resultDir(cornerNum)),testName{testNum},'psf');
+                    if(nargin ==1)
+                        obj.addCorner(cornerPSFpath);
+                    elseif(nargin >1)
+                        obj.addCorner(cornerPSFpath,varargin{2:end});
+                    end
+                end
+            end
         end
         function parsePath(obj)
             obj.paths.project = char(strjoin({'','prj',obj.names.project},filesep));

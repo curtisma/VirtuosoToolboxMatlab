@@ -192,8 +192,8 @@ classdef cdsOut < matlab.mixin.SetGet
         %
         % See also: cdsOut
             psfLocFolders = strsplit(resultPath,filesep);
-            out = (strcmp('results',psfLocFolders{9}) && length(psfLocFolders) == 14) || ...
-                  (strcmp('results',psfLocFolders{8}) && length(psfLocFolders) == 13);
+            out = ~((strcmp('results',psfLocFolders{9}) && length(psfLocFolders) == 14) || ...
+                    (strcmp('results',psfLocFolders{8}) && length(psfLocFolders) == 13));
         end
     end
 end
