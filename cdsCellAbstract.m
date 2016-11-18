@@ -1,16 +1,7 @@
-classdef cdsCell < matlab.mixin.SetGet
-    %cdsCell A Cadence cell
-    %   Basic cell information
-    %
-    % USAGE
-    %  cell = cdsCell(name,...)
-    % INPUTS and PROPERTIES
-    %  Name - cellname [char]
-    % PARAMETERS and PROPERTIES
-    %  Library - library name or cdsLibrary object [cdsLibrary or char]
-    %  Pinout - skyPinout object representing the pinout of the cell.
-    %   [skyPinout]
-    % see also: cdsLibrary
+classdef cdsCellAbstract
+    %cdsCellAbstract An Abstract cell
+    %   An abstract cell that allows the cdsLibrary class to be subclassed
+    %   and still work with cdsCell
     
     properties
         Library cdsLibrary

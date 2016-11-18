@@ -1,6 +1,6 @@
 classdef cdsOutTest < cdsOut
     %cdsOutRun Cadence Simulation run results
-    %   Collects the data from a single Cadence simulation run.
+    %   Collects the data from a single Cadence test
     
     properties
         corners % An array of cdsOutCorners arranged by simNum
@@ -92,11 +92,11 @@ classdef cdsOutTest < cdsOut
             corner = addCorner@cdsOut(obj,corner,varargin{:});
             if(isempty(obj.corners) && ~isempty(corner))
             % initialize test with the properties of the given corner
-                obj.name = corner.names.test;
+                obj.Name = corner.names.test;
                 obj.names.result = corner.names.result;
                 obj.names.library = corner.names.library;
             elseif(~isempty(obj.corners) && ~isempty(corner))
-                if(~strcmp(obj.name, corner.names.test))
+                if(~strcmp(obj.Name, corner.names.test))
                 % Check that this corner is for this test
                     error('VirtuosoToolbox:cdsOutTest:setCorners','Wrong test name');
                 end
@@ -108,10 +108,10 @@ classdef cdsOutTest < cdsOut
             obj.paths = corner.paths;
             obj.cornerDoneCnt = obj.cornerDoneCnt +1;
             obj.process = corner.process;
-            if(isempty(obj.info) || (isempty(obj.info) && ~isfield(obj.info,'cornerNames')))
+            if(isempty(obj.Info) || (isempty(obj.Info) && ~isfield(obj.Info,'cornerNames')))
                 obj.getCornerList;
             end
-            corner.name = obj.info.cornerNames{corner.simNum};
+            corner.Name = obj.Info.cornerNames{corner.simNum};
             
         end
         function getAllPropertiesCorners(obj)
@@ -135,20 +135,20 @@ classdef cdsOutTest < cdsOut
                 else
                     obj.paths.runObjFile = strjoin({obj.paths.psfTmp 'runObjFile'},filesep);
                 end
-                obj.info.runObjFile = cdsOutMatlab.loadTextFile(obj.paths.runObjFile);
-                numCornerLineNum = strncmp('"Corner_num"',obj.info.runObjFile,12);
+                obj.Info.runObjFile = cdsOutMatlab.loadTextFile(obj.paths.runObjFile);
+                numCornerLineNum = strncmp('"Corner_num"',obj.Info.runObjFile,12);
                 if(~any(numCornerLineNum))
 %                     cornerRowsIdx = strncmp('"Corner=',obj.info.runObjFile,8);
-                    simNum = regexp(obj.info.runObjFile,'"dataDir" "(?:\.\./)+(.*/)','tokens');
+                    simNum = regexp(obj.Info.runObjFile,'"dataDir" "(?:\.\./)+(.*/)','tokens');
                     simNum = simNum(cellfun(@(x) ~isempty(x),simNum));
                     simNum = cellfun(@(x) str2double(x{1}{1}(1:end-1)),simNum);
 %                     [~,simNumOrderedIdx] = sort(simNum);
-                    cornerNames = regexp(obj.info.runObjFile,'"Corner" "(.*)"','tokens');
+                    cornerNames = regexp(obj.Info.runObjFile,'"Corner" "(.*)"','tokens');
                     cornerNames = cornerNames(cellfun(@(x) ~isempty(x),cornerNames));
                     cornerNames = cellfun(@(x) char(x{1}),cornerNames,'UniformOutput',false);
                     cornerNamesOrdered = cell(max(simNum),1);
                     cornerNamesOrdered(simNum) = cornerNames;
-                    obj.info.cornerNames = cornerNamesOrdered;
+                    obj.Info.cornerNames = cornerNamesOrdered;
 %                     cornerNamse = cellfun(@(x,y) 
                 else
                     obj.info.numCorners = str2double(obj.info.runObjFile{numCornerLineNum}(13:end));
@@ -195,7 +195,7 @@ classdef cdsOutTest < cdsOut
                 varVal.(variableNames{varIdx}) = [vars.(variableNames{varIdx})]';
             end
             dataTable = [dataTable struct2table(varVal)];
-            dataTable.Properties.RowNames = {obj.corners.name};
+            dataTable.Properties.RowNames = {obj.corners.Name};
         end
         function set.process(obj,val)
             if(ischar(val))

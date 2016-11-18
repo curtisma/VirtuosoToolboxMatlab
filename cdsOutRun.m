@@ -1,10 +1,15 @@
 classdef cdsOutRun < cdsOut
     %cdsOutRun Cadence Simulation run results
     %   Collects the data from a single Cadence simulation run.
-    
+    %
+    % USAGE
+    %  cdsOutMatlab(axlCurrentResultsPath,...)
+    %
+    % INPUTS
+    %
+    %
     properties
         tests
-        script
         names
         paths
         process
@@ -42,7 +47,7 @@ classdef cdsOutRun < cdsOut
             p.addParameter('transientSignals',[],@iscell);
             p.addParameter('dcSignals',[],@iscell);
             p.addParameter('desktop',false,@islogical);
-            p.addParameter('process',cdsProcess.empty);
+            p.addParameter('process',processes.GENERIC.empty);
             p.parse(varargin{:});
             
             if(ischar(p.Results.data) || isa(p.Results.data,'cdsOutCorner'))
@@ -68,17 +73,17 @@ classdef cdsOutRun < cdsOut
             % Check that the corner corresponds to this run 
             if(isempty(obj.tests) && ~isempty(corner))
             % initialize run with the properties of the given corner
-                obj.name = corner.names.result;
+                obj.Name = corner.names.result;
                 obj.names.library = corner.names.library;
                 corner.result = obj;
             elseif(~isempty(obj.tests) && ~isempty(corner))
-                if(~strcmp(obj.name, corner.names.result))
+                if(~strcmp(obj.Name, corner.names.result))
                 % Check that this corner is for this run
                     error('VirtuosoToolbox:cdsOutTest:setCorners','Wrong test name');
                 end
             end
             % Find the corner's test or start a new one
-            selTest = strcmp({obj.tests.name},corner.names.test);
+            selTest = strcmp({obj.tests.Name},corner.names.test);
             if(isempty(selTest)||~any(selTest))
                 obj.tests(end+1) = cdsOutTest(corner,varargin{:});
             elseif(sum(selTest)==1)
@@ -87,6 +92,24 @@ classdef cdsOutRun < cdsOut
                 error('VirtuosoToolbox:cdsOutTest:setCorners','Multiple test matches found');
             end
             obj.process = corner.process;
+        end
+        function parsePath(obj)
+            obj.paths.project = char(strjoin({'','prj',obj.names.project},filesep));
+            obj.paths.doc = fullfile(obj.paths.project,'doc');
+            obj.paths.matlab = fullfile(obj.paths.doc,'matlab');
+            obj.paths.runData = char(strjoin(obj.paths.psfLocFolders(1:11),filesep));
+            
+            obj.names.user = psfLocFolders{4};
+            obj.names.library = psfLocFolders{5};
+            inUserLib = find(strcmp('adexl',psfLocFolders)) == 8;
+            if(inUserLib)
+                obj.names.userLibrary = psfLocFolders{6};
+            end
+            obj.names.testBenchCell = psfLocFolders{6+inUserLib};
+            obj.names.result = psfLocFolders{10+inUserLib};
+            
+%             obj.names.test = psfLocFolders{12+inUserLib};
+%             obj.paths.testData = 
         end
         function val = get.simDone(obj)
             if(isempty(obj.tests))
@@ -98,7 +121,7 @@ classdef cdsOutRun < cdsOut
         end
         function set.tests(obj,val)
             if(isempty(obj.tests) && ~isempty(val))
-                obj.name = val.names.result;
+                obj.Name = val.names.result;
             end
             obj.tests = val;
             % initialize cdsOutMatlab with the
@@ -112,29 +135,50 @@ classdef cdsOutRun < cdsOut
             end
             obj.process = val;
         end
-%         function varargout = subsref(obj,s)
-%         % Provides customized indexing into an array of objects
-%         %
-%         % moved from cdsOutRun.m
-% %         if(~isa(obj)
-%             switch s(1).type
-%                 case {'{}' '()'}
-%                     if(iscell(s(1).subs) && ischar(s(1).subs{1}))
-%                         s(1).subs = {strcmp(s(1).subs,{obj.name})};
-%                         s(1).type = '()';
-%                     end
-%                     varargout = {builtin('subsref',obj,s)};
-%                 otherwise
-%                     varargout = {builtin('subsref',obj,s)};
-%             end	
-%         end
-%         function varargout = numArgumentsFromSubscript(obj,s,indexingContext)
-%             if(strcmp('{}',s(1).type) && iscell(s(1).subs(1)) && ischar(s(1).subs{1}))
-%                 varargout = {1};
-%             else
-%                 varargout = {builtin('numArgumentsFromSubscript',obj,s,indexingContext)};
-%             end
-%         end
+        function varargout = subsref(obj,s)
+        % subsref Provides customized indexing into the results property
+        %
+        % See also: cdsOutMatlab, cdsOutMatlab/numArgumentsFromSubscript
+            if(length(s)>=2 && strcmp(s(1).type,'.') && strcmp(s(1).subs,'tests'))
+                switch s(2).type
+                    case {'{}' '()'}
+                        if(iscell(s(2).subs))
+                            resultIdx = strcmp(s(2).subs{1},obj.tests.Name);
+                            if(any(resultIdx))
+                                if(length(s) == 2)
+                                    varargout = {obj.tests(resultIdx)};
+                                else
+                                    varargout = {builtin('subsref',obj,s)};
+                                end
+                            else
+                                warning('Result not found')
+                                varargout = {cdsOutRun.empty};
+                            end
+                        else
+                            varargout = {obj.results.subsref(obj.results,s(2:end))};
+                        end
+                    case '.'
+                        varargout = {builtin('subsref',obj,s)};
+                end
+            elseif(any(strcmp(s(1).subs,methods(obj))))
+                if(strcmp(s(1).subs,'subsref'))
+                    varargout = {obj.subsref(obj,s(2:end))};
+                elseif(nargout == 0)
+                    builtin('subsref',obj,s);
+                else
+                    varargout = {builtin('subsref',obj,s)};
+                end
+            else
+                varargout = {builtin('subsref',obj,s)};
+            end
+        end
+        function varargout = numArgumentsFromSubscript(obj,s,indexingContext)
+            if(length(s)>=2 && strcmp(s(1).type,'.') && strcmp(s(1).subs,'tests'))
+                varargout = {1};
+            else
+                varargout = {builtin('numArgumentsFromSubscript',obj,s,indexingContext)};
+            end
+        end
     end
     
 end

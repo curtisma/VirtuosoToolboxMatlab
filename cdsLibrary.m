@@ -3,25 +3,32 @@ classdef cdsLibrary < matlab.mixin.SetGet
     %   Basic information about the library
     %
     % USAGE
-    %  library = cdsLibrary(name)
+    %  library = cdsLibrary(Name)
+    %
+    % INPUTS & PROPERTIES
+    %  Name - name of the library [char]
+    %
+    % See Also: cdsCell
+    
     properties
-        name 
+        Name
+        Cells
     end
     
     methods
-    	function obj = cdsCell(name,varargin)
+    	function obj = cdsLibrary(Name,varargin)
             p = inputParser;
             p.KeepUnmatched = true;
-            p.addRequired('name',@ischar);
-            p.parse(varargin{:});
+            p.addRequired('Name',@ischar);
+            p.parse(Name,varargin{:});
             
-            obj.name = name;
+            obj.Name = Name;
         end
-        function set.name(obj,val)
+        function set.Name(obj,val)
             if(~ischar(val))
-                error('VirtuosoToolbox:cdsCell:notChar','name must be a char')
+                error('VirtuosoToolbox:cdsCell:notChar','Name must be a char')
             end
-            obj.name = val;
+            obj.Name = val;
         end
         
     end

@@ -50,13 +50,13 @@ classdef cdsOutCorner < cdsOut
             end
             % Parse Inputs
             p = inputParser;
-            %p.KeepUnmatched = true;
+            p.KeepUnmatched = true;
             p.addOptional('axlCurrentResultsPath','',@ischar);
             p.addParameter('signals',{},@iscell);
             p.addParameter('transientSignals',{},@iscell);
             p.addParameter('dcSignals',{},@iscell);
             p.addParameter('desktop',false,@islogical);
-            p.addParameter('process',cdsProcess.empty);
+            p.addParameter('process',processes.GENERIC.empty);
 %             p.addParameter('test',@islogical);
             p.parse(varargin{:});
             obj.process = p.Results.process;
@@ -66,11 +66,11 @@ classdef cdsOutCorner < cdsOut
 %                 obj.analyses.transient.waveformsList = p.Results.signals;
 %             end
 %             if(~isempty(p.Results.dcSignals))
-%                 obj.info.dc.signalList =
-%                 obj.info.dc.waveformsList = p.Results.dcSignals;
+%                 obj.Info.dc.signalList =
+%                 obj.Info.dc.waveformsList = p.Results.dcSignals;
 %             elseif(~isempty(p.Results.signals))
-%                 obj.info.dc.signalList
-%                 obj.info.dc.signalList = p.Results.signals;
+%                 obj.Info.dc.signalList
+%                 obj.Info.dc.signalList = p.Results.signals;
 %             end
             obj.signals = p.Results.signals;
             
@@ -104,7 +104,7 @@ classdef cdsOutCorner < cdsOut
                 otherwise
                     warning('Wrong or unsupported analysis type');
             end
-        	signalOut = cds_srr( obj.paths.psf, cdsAnalysisName, signal);
+        	[~, signalOut] = evalc('cds_srr( obj.paths.psf, cdsAnalysisName, signal)');
             obj.data.(analysis).(signal) = signalOut;
         end
         function getAnalysisProperties(obj,analysis)
@@ -114,11 +114,11 @@ classdef cdsOutCorner < cdsOut
         %  obj.getAnalysisProperties(analysis);
         %   places the properties in the analysis's struct
         %
-            obj.analyses.(obj.analysisName(analysis)).properties.list = cds_srr(obj.paths.psf,analysis);
+            [~,obj.analyses.(obj.analysisName(analysis)).properties.list] = evalc('cds_srr(obj.paths.psf,analysis)');
             properties = obj.analyses.(obj.analysisName(analysis)).properties.list.prop;
             for i = 1:length(properties)
-                obj.analyses.(obj.analysisName(analysis)).properties.(regexprep(properties{i},'\(|\)|\.| ','')) = ...
-                cds_srr(obj.paths.psf,analysis,properties{i});
+                [~,obj.analyses.(obj.analysisName(analysis)).properties.(regexprep(properties{i},'\(|\)|\.| ',''))] = ...
+                evalc('cds_srr(obj.paths.psf,analysis,properties{i})');
             end
         end
         function getDatasetProperties(obj,dataset)
@@ -128,33 +128,35 @@ classdef cdsOutCorner < cdsOut
         %  obj.getAnalysisProperties(analysis);
         %   places the properties in the analysis's struct
         %
-            if(~isfield(obj.info,'datasetProperties'))
-                obj.info.datasetProperties = struct;
+            if(~isfield(obj.Info,'datasetProperties'))
+                obj.Info.datasetProperties = struct;
             end
-            if(~isfield(obj.info.datasetProperties,dataset))
-                obj.info.datasetProperties.(datset) = struct;
+            if(~isfield(obj.Info.datasetProperties,dataset))
+                obj.Info.datasetProperties.(datset) = struct;
             end
-            obj.info.datsetProperties.(datset).list = cds_srr(obj.paths.psf,dataset);
-            properties = obj.info.datsetProperties.(datset).list.prop;
+            [~,obj.Info.datsetProperties.(datset).list] = evalc('cds_srr(obj.paths.psf,dataset)');
+            properties = obj.Info.datsetProperties.(datset).list.prop;
             for i = 1:length(properties)
-                obj.info.datsetProperties.(datset).(regexprep(properties{i},'\(|\)|\.| ','')) = ...
-                cds_srr(obj.paths.psf,dataset,properties{i});
+                [~,obj.Info.datsetProperties.(datset).(regexprep(properties{i},'\(|\)|\.| ',''))] = ...
+                evalc('cds_srr(obj.paths.psf,dataset,properties{i})');
             end
         end
         function loadAnalyses(obj)
-            obj.info.datasets = cds_srr(obj.paths.psf);
-            obj.info.availableAnalyses = intersect(obj.info.datasets,obj.analysisTypes);
-            if(any(strcmp('stb-stb',obj.info.availableAnalyses)))
-                obj.getDataSTB;
+        % Loads all analyses
+%             obj.Info.datasets = cds_srr(obj.paths.psf);
+            [~,obj.Info.datasets] = evalc('cds_srr(obj.paths.psf)');
+            obj.Info.availableAnalyses = intersect(obj.Info.datasets,obj.analysisTypes);
+            if(any(strcmp('stb-stb',obj.Info.availableAnalyses)))
+                obj.analyses.stb = analyses.STB(obj);
             end
-            if(any(strcmp(analyses.DC.cdsName,obj.info.availableAnalyses)))
+            if(any(strcmp(analyses.DC.cdsName,obj.Info.availableAnalyses)))
                 obj.analyses.dc = analyses.DC(obj,'signals',obj.signals);
             end
             
-            if(any(strcmp('tran-tran',obj.info.availableAnalyses)))
+            if(any(strcmp('tran-tran',obj.Info.availableAnalyses)))
                 obj.getDataTransient;
             end
-            if(any(strcmp('dcOp-dc',obj.info.availableAnalyses)))
+            if(any(strcmp('dcOp-dc',obj.Info.availableAnalyses)))
                 obj.getDataDCop;
             end
         end
@@ -182,16 +184,16 @@ classdef cdsOutCorner < cdsOut
         function getSpectreLog(obj)
         % Get Spectre log file
             obj.paths.spectreLog = fullfile(obj.paths.psf,'spectre.out');
-            obj.info.log = cdsOutMatlab.loadTextFile(obj.paths.spectreLog);
+            obj.Info.log = cdsOutMatlab.loadTextFile(obj.paths.spectreLog);
         end
         function processCorner = getProcessCorner(obj)
         % Get the model information
             obj.paths.modelFileInfo = strsplit(obj.paths.psf,filesep);
             obj.paths.modelFileInfo = fullfile(char(strjoin(obj.paths.modelFileInfo(1:end-1),filesep)),'netlist', '.modelFiles');
-            obj.info.modelFileInfo = cdsOutMatlab.loadTextFile(obj.paths.modelFileInfo);
-            if(~isempty(obj.info.modelFileInfo) && (length(obj.info.modelFileInfo)==1))
-                obj.processCorner = obj.info.modelFileInfo{1}(strfind(obj.info.modelFileInfo{1},'section=')+8:end);
-            elseif(~isempty(obj.info.modelFileInfo))
+            obj.Info.modelFileInfo = cdsOutMatlab.loadTextFile(obj.paths.modelFileInfo);
+            if(~isempty(obj.Info.modelFileInfo) && (length(obj.Info.modelFileInfo)==1))
+                obj.processCorner = obj.Info.modelFileInfo{1}(strfind(obj.Info.modelFileInfo{1},'section=')+8:end);
+            elseif(~isempty(obj.Info.modelFileInfo))
                 obj.processCorner = 'NOM';
             else
                 obj.processCorner = '';
@@ -203,28 +205,20 @@ classdef cdsOutCorner < cdsOut
         %
         % USE:
         %  obj.getVariables;
-            obj.info.variables = cds_srr(obj.paths.psf,'variables');
-            varNames = cds_srr(obj.paths.psf,'variables');
+%             obj.Info.variables = cds_srr(obj.paths.psf,'variables');
+            [~,varNames] = evalc(sprintf('cds_srr(obj.paths.psf,''variables'')'));
+            obj.Info.variables = varNames;
             varNames = varNames.variable;
             for i = 1:length(varNames)
-                obj.info.variablesData.(regexprep(varNames{i}(1:end-6),'\(|\)|\.| ','')) = ...
-                cds_srr(obj.paths.psf,'variables',varNames{i});
+%                 obj.Info.variablesData.(regexprep(varNames{i}(1:end-6),'\(|\)|\.| ','')) = ...
+%                 cds_srr(obj.paths.psf,'variables',varNames{i});
+                [~,obj.Info.variablesData.(regexprep(varNames{i}(1:end-6),'\(|\)|\.| ',''))] = ...
+                evalc(sprintf('cds_srr(obj.paths.psf,''variables'',varNames{i})'));
             end
-            obj.variables = obj.info.variablesData;
-        end
-        function getDataSTB(obj)
-        % Loads stability (stb) analysis data
-            obj.analyses.stb.phaseMargin = cds_srr(obj.paths.psf,'stb-margin.stb','phaseMargin');
-            obj.analyses.stb.gainMargin = cds_srr(obj.paths.psf,'stb-margin.stb','gainMargin');
-            obj.analyses.stb.loopGain = cds_srr(obj.paths.psf,'stb-stb','loopGain');
-            obj.analyses.stb.phaseMarginFrequency = cds_srr(obj.paths.psf,'stb-margin.stb','phaseMarginFreq');
-            obj.analyses.stb.gainMarginFrequency = cds_srr(obj.paths.psf,'stb-margin.stb','gainMarginFreq');
-            obj.analyses.stb.probe = cds_srr(obj.paths.psf,'stb-stb','probe');
-            obj.analyses.stb.info = cds_srr(obj.paths.psf,'stb-stb');
-            obj.analyses.stb.infoMargin = cds_srr(obj.paths.psf,'stb-margin.stb');
+            obj.variables = obj.Info.variablesData;
         end
         function getDataDCop(obj)
-            obj.analyses.dcOp.info = cds_srr(obj.paths.psf,'dcOp-dc');
+            obj.analyses.dcOp.info = evalc(sprintf('cds_srr(obj.paths.psf,''dcOp-dc'')'));
         end
         function getDataTransient(obj)
             obj.analyses.transient.info = cds_srr(obj.paths.psf,'tran-tran');

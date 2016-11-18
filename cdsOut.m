@@ -1,11 +1,11 @@
 classdef cdsOut < matlab.mixin.SetGet
-    %UNTITLED3 Summary of this class goes here
-    %   Detailed explanation goes here
+    %cdsOut An abstract class for Cadence Matlab output data handling
+    %   A class for handling the 
     
     properties
-        name
-        info
-        
+        Name
+        Info
+        DUT
     end
     properties (Abstract)
         names
@@ -19,6 +19,7 @@ classdef cdsOut < matlab.mixin.SetGet
             p.KeepUnmatched = true;
             p.addOptional('data',[],@(x) true);
             p.addParameter('desktop',false,@islogical);
+%             p.addParameter('DUT',cdscell.empty,@(x) isa(x,'cdsCell'));
             p.parse(varargin{:});
             
             % start desktop (optional)
@@ -27,7 +28,7 @@ classdef cdsOut < matlab.mixin.SetGet
             end
         end
         function dir(obj,dirPath)
-        % dir Saves the contents of dirPath to obj.info.dir.(dirPath)
+        % dir Saves the contents of dirPath to obj.Info.dir.(dirPath)
         %
         % Saves it as a cell array of char arrays
             if(length(obj)>1)
@@ -49,7 +50,7 @@ classdef cdsOut < matlab.mixin.SetGet
             if(ispc && strcmp(pathDirs{1},''))
                 dirPath = ['R:' dirPath];
             end
-                [obj.info.dir.(dirName)] = deal(dir(dirPath));
+                [obj.Info.dir.(dirName)] = deal(dir(dirPath));
         end
         function out = find(varargin)
         % Utility for finding sim results
@@ -95,39 +96,14 @@ classdef cdsOut < matlab.mixin.SetGet
         end
     end
     methods (Static)
-        function out = loadTextFile(path)
-        % loadTextFile Loads a text file located at the given path.
-        %  Returns a cell array with each line of the file a row in the
-        %  cell array.
-        %
-        %  textFileCell = loadTextFile(path)
-        %
-            [fid,errorMessage] = fopen(path,'r');
-            if(fid >0)
-                out = textscan(fid,'%s','Delimiter',sprintf('\n'));
-                out = out{1};
-                fclose(fid);
-            else
-                disp(errorMessage);
-                disp(['Could not open ' path  sprintf('\n') errorMessage]);
-
-                out = '';
-            end
-        end
-        function startDesktop
-        % Starts the matlab desktop if it isn't already in use
-            if(~desktop('-inuse'))
-                desktop % displays the desktop but can take a long time to open
-                %workspace % View variables as they change
-                %commandwindow
-            end
-        end
         function logLoc = startLog(varargin)
         % Starts a log (diary) of the matlab output including warnings and
         % errors.  Returns the location of the log.
         %
         % USAGE
         %  logPath = startLog(obj,axlCurrentResultsPath)
+        %
+        % See also: cdsOut
             if(nargin == 1)
                 psfLocFolders = strsplit(varargin{1},filesep);
                 logLoc = char(strjoin({'','prj',psfLocFolders{5},'doc','matlab'},filesep));
@@ -146,6 +122,78 @@ classdef cdsOut < matlab.mixin.SetGet
                 end
             end
             diary(fullfile(logLoc,'matlab.log')); % Enable MATLAB log file
+        end
+        function simNum = getSimNum(axlCurrentResultsPath)
+        % getSimNum Provides the sin number for each corner.  This is 
+        %  useful for saving each corner to a seperate cdsOutMatlab object
+        %  and then returning to adexl by using the Results variable to show
+        %  the correspondence between the adexl corner names and the sim
+        %  number
+        %
+        % INPUTS
+        %  axlCurrentResultsPath - Path to the psf folder containing the
+        %   simulation results for a given corner.  This variable is
+        %   provided in the workspace by adexl.
+        % OUTPUTS
+        %  simNum - Simulation number assigned that is assigned to each
+        %   corner.
+        % EXAMPLE
+        %  Results = cdsOutMatlab.getSimNum(axlCurrentResultsPath);
+        %  MAT(Results) = cdsOutMatlab.getSimNum(axlCurrentResultsPath);
+        %  MAT.save(filePath)
+        %
+        % see also:
+            try
+                psfLocFolders = strsplit(char(axlCurrentResultsPath),filesep);
+                simNum = str2double(psfLocFolders{12});
+            catch ME
+                simNum = -1;
+                disp(ME)
+            end
+        end
+        function out = loadTextFile(path)
+        % loadTextFile Loads a text file located at the given path.
+        %  Returns a cell array with each line of the file a row in the
+        %  cell array.
+        %
+        % USAGE
+        %  textFileCell = loadTextFile(path)
+        %
+        % See also: cdsOut
+            [fid,errorMessage] = fopen(path,'r');
+            if(fid >0)
+                out = textscan(fid,'%s','Delimiter',sprintf('\n'));
+                out = out{1};
+                fclose(fid);
+            else
+                disp(errorMessage);
+                disp(['Could not open ' path  sprintf('\n') errorMessage]);
+
+                out = '';
+            end
+        end
+        function startDesktop
+        % startDesktop Starts the matlab desktop if it isn't already in use
+        %
+        % USAGE
+        %  cdsOut.startDesktop
+        %
+        % See also: cdsOut
+            if(~desktop('-inuse'))
+                desktop % displays the desktop but can take a long time to open
+                %workspace % View variables as they change
+                %commandwindow
+            end
+        end
+        function out = isResultFolder(resultPath)
+        %isResultFolder Output is true if the provided result path is a 
+        % results folder containing multiple corners.  If a path to a 
+        % corner psf folder is provided this function returns false.
+        %
+        % See also: cdsOut
+            psfLocFolders = strsplit(resultPath,filesep);
+            out = (strcmp('results',psfLocFolders{9}) && length(psfLocFolders) == 14) || ...
+                  (strcmp('results',psfLocFolders{8}) && length(psfLocFolders) == 13);
         end
     end
 end
