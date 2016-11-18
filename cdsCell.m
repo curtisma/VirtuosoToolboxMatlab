@@ -1,4 +1,4 @@
-classdef cdsCell < matlab.mixin.SetGet
+classdef cdsCell < cdsCellAbstract
     %cdsCell A Cadence cell
     %   Basic cell information
     %
@@ -20,31 +20,17 @@ classdef cdsCell < matlab.mixin.SetGet
         Name
     end
     methods
-        function obj = cdsCell(name,varargin)
+        function obj = cdsCell(Name,varargin)
         %bandgap Construct a new cdsCell cell object
         %   See class description for usage information
         %
         % See also: cdsCell
+            obj@cdsCellAbstract(Name,varargin{:});
             p = inputParser;
             p.KeepUnmatched = true;
-            p.addRequired('Name',@ischar);
             p.addParameter('Library',cdsLibrary.empty,@(x) ischar(x) || isa(x,'cdsLibrary'));
-            p.addParameter('Pinout',skyPinout.empty,@(x) isa(x,'skyPinout') || ischar(x));
-            p.parse(name,varargin{:});
-            
-            obj.Name    = p.Results.Name;
-            if(ischar(p.Results.Pinout))
-                obj.Pinout  = skyPinout(p.Results.Pinout);
-            else
-                obj.Pinout  = p.Results.Pinout;
-            end
+            p.parse(varargin{:});
             obj.Library = p.Results.Library;
-        end
-        function set.Name(obj,val)
-            if(~ischar(val))
-                error('VirtuosoToolbox:cdsCell:notChar','name must be a char')
-            end
-            obj.Name = val;
         end
         function set.Library(obj,val)
             if(ischar(val))
