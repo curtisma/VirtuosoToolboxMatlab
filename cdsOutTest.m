@@ -14,7 +14,7 @@ classdef cdsOutTest < cdsOut
         cornerDoneCnt
     end
     properties (Dependent)
-        simDone
+        Done
         analysisNames
     end
         
@@ -149,11 +149,12 @@ classdef cdsOutTest < cdsOut
                     cornerNamesOrdered = cell(max(simNum),1);
                     cornerNamesOrdered(simNum) = cornerNames;
                     obj.Info.cornerNames = cornerNamesOrdered;
+                    obj.Info.numCorners = length(cornerNamesOrdered);
 %                     cornerNamse = cellfun(@(x,y) 
                 else
-                    obj.info.numCorners = str2double(obj.info.runObjFile{numCornerLineNum}(13:end));
+                    obj.Info.numCorners = str2double(obj.info.runObjFile{numCornerLineNum}(13:end));
                     cornerNames = {obj.info.runObjFile{find(numCornerLineNum)+1:find(numCornerLineNum)+obj.info.numCorners}};
-                    obj.info.cornerNames = cellfun(@(x,y) x(y(3)+1:end-1),cornerNames,strfind(cornerNames,'"'),'UniformOutput',false);
+                    obj.Info.cornerNames = cellfun(@(x,y) x(y(3)+1:end-1),cornerNames,strfind(cornerNames,'"'),'UniformOutput',false);
                 end
 %                 obj.names.corner = obj.info.cornerNames{obj.simNum};
 %                 obj.getCornerInfo;
@@ -166,9 +167,9 @@ classdef cdsOutTest < cdsOut
             obj.paths.result = char(strjoin(obj.paths.psfLocFolders(1:11),filesep));
 %             obj.paths.testData = 
         end
-        function val = get.simDone(obj)
-            if(isstruct(obj.info) && isfield(obj.info,'numCorners'))
-                val = (obj.cornerDoneCnt == obj.info.numCorners);
+        function val = get.Done(obj)
+            if(isstruct(obj.Info) && isfield(obj.Info,'numCorners'))
+                val = (obj.cornerDoneCnt == obj.Info.numCorners);
             else
                 val = false;
             end

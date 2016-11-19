@@ -20,7 +20,7 @@ classdef cdsOutCorner < cdsOut
     properties (Dependent)
     end
     properties (Access = private,Constant,Hidden)
-        analysisTypes = {'tran-tran','stb-stb','stb-margin.stb','dcOp-dc','dc-dc'};
+        analysisTypes = {'tran-tran','stb-stb','stb-margin.stb','dcOp-dc','dc-dc','ac-ac'};
     end
     
     methods
@@ -152,7 +152,6 @@ classdef cdsOutCorner < cdsOut
             if(any(strcmp(analyses.DC.cdsName,obj.Info.availableAnalyses)))
                 obj.analyses.dc = analyses.DC(obj,'signals',obj.signals);
             end
-            
             if(any(strcmp('tran-tran',obj.Info.availableAnalyses)))
                 obj.getDataTransient;
             end

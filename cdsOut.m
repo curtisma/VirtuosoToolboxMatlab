@@ -17,7 +17,7 @@ classdef cdsOut < matlab.mixin.SetGet
             % Parse Inputs
             p = inputParser;
             p.KeepUnmatched = true;
-            p.addOptional('data',[],@(x) true);
+            p.addOptional('data',[],@(x) ischar(x) || isa(x,'cdsOut'));
             p.addParameter('desktop',false,@islogical);
 %             p.addParameter('DUT',cdscell.empty,@(x) isa(x,'cdsCell'));
             p.parse(varargin{:});
@@ -189,6 +189,9 @@ classdef cdsOut < matlab.mixin.SetGet
         %isResultFolder Output is true if the provided result path is a 
         % results folder containing multiple corners.  If a path to a 
         % corner psf folder is provided this function returns false.
+        %
+        % USAGE
+        %  out = isResultFolder(resultPath)
         %
         % See also: cdsOut
             psfLocFolders = strsplit(resultPath,filesep);

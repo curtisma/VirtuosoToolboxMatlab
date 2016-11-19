@@ -3,18 +3,11 @@ classdef cdsOutRun < cdsOut
     %   Collects the data from a single Cadence simulation run.
     %
     % USAGE
-    %  runObj = cdsOutRun(data,...)
-    %
-    %  runObj = cdsOutRun(axlCurrentResultsPath,...)
-    %  runObj = cdsOutRun(corner,...)
-    %  runObj = cdsOutRun(test,...)
+    %  cdsOutRun(axlCurrentResultsPath,...)
+    %  obj = cdsOutRun(corner,...)
+    %  obj = cdsOutRun(test,...)
     % INPUTS
-    %  data- cdsOutTest or cdsOutCorner object or path to test data directory as a char
-    % Parameters
-    %  signals - 
-    %  transientSignals - 
-    %  dcSingals - 
-    %  process - process specific information
+    %
     %
     properties
         tests
@@ -26,29 +19,41 @@ classdef cdsOutRun < cdsOut
         cornerDoneCnt
     end
     properties (Dependent)
-        Done
+        simDone
     end
     
     methods
         function obj = cdsOutRun(varargin)
         % cdsOutRun A single simulation run
-        %   See class description for usage information.
         %
-        % See also: cdsOutRun
+        % USE
+        %  obj = cdsOutRun(axlCurrentResultsPath,...)
+        %  obj = cdsOutRun(corner,...)
+        %  obj = cdsOutRun(test,...)
+        %  obj = cdsOutRun
+        %
+        % INPUTS
+        %  test- cdsOutTest object or path to test data directory as a char
+        % Parameters
+        %  signals 
+        %  transientSignals
+        %  dcSingals -
+        %  process - process specific information
         
-            obj = obj@cdsOut(varargin{:}); % Superclass constructor
+%             obj = obj@cdsOut(varargin{:}); % Superclass constructor
             p = inputParser;
             %p.KeepUnmatched = true;
             p.addOptional('data',cdsOutTest.empty,@(x) ischar(x) || isa(x,'cdsOutCorner') || isa(x,'cdsOutTest'));
             p.addParameter('signals',[],@iscell);
             p.addParameter('transientSignals',[],@iscell);
             p.addParameter('dcSignals',[],@iscell);
+            p.addParameter('desktop',false,@islogical);
             p.addParameter('process',processes.GENERIC.empty);
+            p.addParameter('loadData',false,@islogical)
             p.parse(varargin{:});
             
-            % Load a full result if a results dir is provided
-            if(ischar(p.Results.data) && cdsOutRun.isResultFolder(p.Results.data))
-                obj.tests = cdsOutTest.empty;
+            % Load a full result if using the loadData option
+            if(p.Results.loadData && ~isempty(p.Results.data))
             	obj.loadData(varargin{:})
             % Normal corner path
             elseif(ischar(p.Results.data) || isa(p.Results.data,'cdsOutCorner'))
@@ -59,8 +64,8 @@ classdef cdsOutRun < cdsOut
                 end
                 corner.results = obj;
             elseif(isa(p.Results.data,'cdsOutTest'))
-%                 obj.paths.test = 
-                obj.tests(end+1) = p.Results.data;
+%                 obj.paths.test = p.Results.data;
+                obj.tests = cdsOutTest.empty;
             else
                 obj.tests = cdsOutTest.empty;
             end
@@ -84,11 +89,7 @@ classdef cdsOutRun < cdsOut
                 end
             end
             % Find the corner's test or start a new one
-            if(~isempty(obj.tests))
-                selTest = strcmp({obj.tests.Name},corner.names.test);
-            else
-                selTest = [];
-            end
+            selTest = strcmp({obj.tests.Name},corner.names.test);
             if(isempty(selTest)||~any(selTest))
                 obj.tests(end+1) = cdsOutTest(corner,varargin{:});
             elseif(sum(selTest)==1)
@@ -150,12 +151,12 @@ classdef cdsOutRun < cdsOut
 %             obj.names.test = psfLocFolders{12+inUserLib};
 %             obj.paths.testData = 
         end
-        function val = get.Done(obj)
+        function val = get.simDone(obj)
             if(isempty(obj.tests))
                 val = false;
             else
                 % Check to make sure all the runs are complete
-                val = all(obj.tests.Done);
+                val = all(obj.tests.simDone);
             end
         end
         function set.tests(obj,val)
