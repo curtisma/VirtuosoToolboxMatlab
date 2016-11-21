@@ -146,9 +146,9 @@ classdef cdsOutCorner < cdsOut
 %             obj.Info.datasets = cds_srr(obj.paths.psf);
             [~,obj.Info.datasets] = evalc('cds_srr(obj.paths.psf)');
             obj.Info.availableAnalyses = intersect(obj.Info.datasets,obj.analysisTypes);
-            if(any(strcmp('stb-stb',obj.Info.availableAnalyses)))
-                obj.analyses.stb = analyses.STB(obj);
-            end
+%             if(any(strcmp('stb-stb',obj.Info.availableAnalyses)))
+%                 obj.analyses.stb = analyses.STB(obj);
+%             end
             if(any(strcmp(analyses.DC.cdsName,obj.Info.availableAnalyses)))
                 obj.analyses.dc = analyses.DC(obj,'signals',obj.signals);
             end

@@ -3,6 +3,7 @@ classdef cdsOutTest < cdsOut
     %   Collects the data from a single Cadence test
     
     properties
+        analyses
         corners % An array of cdsOutCorners arranged by simNum
         cornernames
         run
@@ -63,6 +64,8 @@ classdef cdsOutTest < cdsOut
             
             % Add first corner
             obj.corners = cdsOutCorner.empty;
+            obj.analyses = struct;
+            obj.analyses.stb = analyses.STB;
             if(~isempty(p.Results.corner))
                 if(nargin >1)
                     obj.addCorner(p.Results.corner,varargin{2:end});
@@ -103,7 +106,7 @@ classdef cdsOutTest < cdsOut
             end
             corner.test = obj;
             obj.corners(corner.simNum) = corner;
-            
+            obj.analyses.stb.loadData(corner);
             obj.names = corner.names;
             obj.paths = corner.paths;
             obj.cornerDoneCnt = obj.cornerDoneCnt +1;

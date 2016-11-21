@@ -10,7 +10,7 @@ classdef cdsCellAbstract < matlab.mixin.SetGet
     properties (Abstract)
         Library
     end
-    properties (Access = protected)
+    properties (SetAccess = protected)
         Name
     end
     methods
