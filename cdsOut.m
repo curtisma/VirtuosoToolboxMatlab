@@ -1,7 +1,38 @@
 classdef cdsOut < matlab.mixin.SetGet
     %cdsOut An abstract class for Cadence Matlab output data handling
-    %   A class for handling the 
-    
+    %   A class for handling corners information
+    %
+    % USAGE
+    %  obj = obj@cdsOut(varargin{:}); % Superclass constructor
+    %  obj = cdsOutSubClass([data],...)
+    % INPUTS
+    %  data (optional) - A path to the dataset or a object of cdsOut
+    %   subclass
+    % PARAMETERS
+    %  desktop - opens a matlab desktop if its not already open.  It does
+    %   take a long time to open.
+    % PROPERTIES
+    %  Name - name of the cdsOut object
+    %  Info - Extra information [struct]
+    %  names - List of different names [struct]
+    %  paths - Folder paths [struct]
+    %
+    % METHODS
+    %  dir  - Saves directory contents to obj.Info.dir.(dirPath)
+    %  find - Utility for finding sim results
+    %  addCorner - Common addCorner code - to be used at the start of a
+    %   subclass's addCorner function which overrides it
+    %  startLog - Starts a matlab diary log in doc/matlab folder
+    %  getPaths - Loads path information from input data path
+    % STATIC METHODS
+    %  getSimNum - Extracts the sim number from the data path
+    %  loadTextFile - loads a text file to a cell array with each row in
+    %   the array a line of the text file
+    %  startDesktop - starts a MATLAB desktop gui
+    %  isResultFolder - Determines if a path is a full result dataset (true) 
+    %   or a corner dataset (false)
+    %
+    % See also: cdsOutRun,cdsOutTest,cdsOutCorner
     properties
         Name
         Info
@@ -29,6 +60,9 @@ classdef cdsOut < matlab.mixin.SetGet
         end
         function dir(obj,dirPath)
         % dir Saves the contents of dirPath to obj.Info.dir.(dirPath)
+        % 
+        % USAGE
+        %  obj.dir(dirPath)
         %
         % Saves it as a cell array of char arrays
             if(length(obj)>1)
@@ -73,12 +107,6 @@ classdef cdsOut < matlab.mixin.SetGet
                 out = '';
             end
         end
-        function getPaths(obj)
-            obj.paths.project = char(strjoin({'','prj',obj.names.project},filesep));
-            obj.paths.doc = fullfile(obj.paths.project,'doc');
-            obj.paths.matlab = fullfile(obj.paths.doc,'matlab');
-            obj.paths.runData = char(strjoin(obj.paths.psfLocFolders(1:11),filesep));
-        end
         function corner = addCorner(obj,corner,varargin)
             if(ischar(corner))
             % Initialize corner
@@ -94,19 +122,19 @@ classdef cdsOut < matlab.mixin.SetGet
                 error('VirtuosoToolbox:cdsOutTest:addCorner','corner must be a cdsOutCorner');
             end
         end
-    end
-    methods (Static)
-        function logLoc = startLog(varargin)
-        % Starts a log (diary) of the matlab output including warnings and
-        % errors.  Returns the location of the log.
+        function logLoc = startLog(obj,varargin)
+        % startLog Starts a log (diary) of the matlab output including 
+        % warnings and errors.  Returns the location of the log.
         %
         % USAGE
-        %  logPath = startLog(obj,axlCurrentResultsPath)
+        %  logPath = startLog(obj,resultDir)
         %
         % See also: cdsOut
-            if(nargin == 1)
+            if(nargin == 2)
                 psfLocFolders = strsplit(varargin{1},filesep);
                 logLoc = char(strjoin({'','prj',psfLocFolders{5},'doc','matlab'},filesep));
+            else
+                error('skyVer:cdsOut:wrongInputs','Wrong number of inputs');
             end
             if(~isempty(logLoc))
                 if(~isdir(logLoc))
@@ -123,6 +151,14 @@ classdef cdsOut < matlab.mixin.SetGet
             end
             diary(fullfile(logLoc,'matlab.log')); % Enable MATLAB log file
         end
+        function getPaths(obj)
+            obj.paths.project = char(strjoin({'','prj',obj.names.project},filesep));
+            obj.paths.doc = fullfile(obj.paths.project,'doc');
+            obj.paths.matlab = fullfile(obj.paths.doc,'matlab');
+            obj.paths.runData = char(strjoin(obj.paths.psfLocFolders(1:11),filesep));
+        end
+    end
+    methods (Static)
         function simNum = getSimNum(axlCurrentResultsPath)
         % getSimNum Provides the sin number for each corner.  This is 
         %  useful for saving each corner to a seperate cdsOutMatlab object
@@ -197,6 +233,35 @@ classdef cdsOut < matlab.mixin.SetGet
             psfLocFolders = strsplit(resultPath,filesep);
             out = ~((strcmp('results',psfLocFolders{9}) && length(psfLocFolders) == 14) || ...
                     (strcmp('results',psfLocFolders{8}) && length(psfLocFolders) == 13));
+        end
+        function logLoc = startLogStatic(varargin)
+        % startLog Starts a log (diary) of the matlab output including 
+        % warnings and errors.  Returns the location of the log.
+        %
+        % USAGE
+        %  logPath = startLog(obj,resultDir)
+        %
+        % See also: cdsOut
+            if(nargin == 2)
+                psfLocFolders = strsplit(varargin{1},filesep);
+                logLoc = char(strjoin({'','prj',psfLocFolders{5},'doc','matlab'},filesep));
+            else
+                error('skyVer:cdsOut:wrongInputs','Wrong number of inputs');
+            end
+            if(~isempty(logLoc))
+                if(~isdir(logLoc))
+                    [log_success,log_msg,log_msgid] = mkdir(logLoc);
+                    if(~log_success)
+                        error(log_msgid,log_msg);
+                    end
+                end
+            else
+                logLoc = userpath;
+                if(ispc)
+                    logLoc = logLoc(1:end-1);
+                end
+            end
+            diary(fullfile(logLoc,'matlab.log')); % Enable MATLAB log file
         end
     end
 end

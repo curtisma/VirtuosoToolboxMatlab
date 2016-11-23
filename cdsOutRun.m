@@ -52,12 +52,13 @@ classdef cdsOutRun < cdsOut
             	obj.loadData(varargin{:})
             % Normal corner path
             elseif(ischar(p.Results.data) || isa(p.Results.data,'cdsOutCorner'))
+                obj.startLog(p.Results.data);
                 if(nargin>1)
                     corner = obj.addCorner(p.Results.data,varargin{2:end});
                 else
                     corner = obj.addCorner(p.Results.data);
                 end
-                corner.results = obj;
+                corner.result = obj;
             elseif(isa(p.Results.data,'cdsOutTest'))
 %                 obj.paths.test = 
                 obj.tests(end+1) = p.Results.data;
@@ -88,6 +89,7 @@ classdef cdsOutRun < cdsOut
                 selTest = strcmp({obj.tests.Name},corner.names.test);
             else
                 selTest = [];
+                obj.tests = cdsOutTest.empty;
             end
             if(isempty(selTest)||~any(selTest))
                 obj.tests(end+1) = cdsOutTest(corner,varargin{:});

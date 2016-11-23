@@ -2,6 +2,16 @@ classdef cdsOutCorner < cdsOut
     %cdsOutCorner Cadence Simulation run results
     %   Collects the data from a single Cadence simulation corner.
     % 
+    % USE
+    %  obj = cdsOutCorners(axlCurrentResultsPath, ...)
+    % PARAMETERS
+    %  signals - defines the signals to save
+    %  transientSignals - defines the signals to save only for a
+    %   transient analysis
+    %  dcSignals - defines the signals to save only for a
+    %   dc analysis
+    %  desktop - Opens a new desktop if one isn't open yet (logical)
+    %
     % See Also: cdsOutCorner/cdsOutCorner, cdsOutMatlab, cdsOutRun, cdsOutTest
     properties
         simNum
@@ -16,6 +26,7 @@ classdef cdsOutCorner < cdsOut
         result
         process
         signals
+        Description
     end
     properties (Dependent)
     end
@@ -26,16 +37,6 @@ classdef cdsOutCorner < cdsOut
     methods
         function obj = cdsOutCorner(varargin)
         % create a new cdsOutCorner object
-        %
-        % USE
-        %  obj = cdsOutCorners(axlCurrentResultsPath, ...)
-        % PARAMETERS
-        %  signals - defines the signals to save
-        %  transientSignals - defines the signals to save only for a
-        %   transient analysis
-        %  dcSignals - defines the signals to save only for a
-        %   dc analysis
-        %  desktop - Opens a new desktop if one isn't open yet (logical)
         %
         % See also: cdsOutCorner, cdsOutTest, cdsOutRun
             obj = obj@cdsOut(varargin{1:end}); % Superclass constructor
@@ -84,6 +85,7 @@ classdef cdsOutCorner < cdsOut
                     obj.getVariables;
                     obj.temp = obj.variables.temp;
                 end
+                obj.Description = [obj.processCorner '_' num2str(obj.temp) 'c'];
             end
         end
         function signalOut = loadSignal(obj,analysis,signal)
@@ -164,7 +166,7 @@ classdef cdsOutCorner < cdsOut
             obj.names.result = psfLocFolders{11};
             obj.names.user = psfLocFolders{4};
             obj.names.library = psfLocFolders{6};
-            obj.names.testBenchCell = psfLocFolders{7};
+            obj.names.adexlCell = psfLocFolders{7};
             obj.names.test = psfLocFolders{13};
         end
         function getPaths(obj)
@@ -172,13 +174,18 @@ classdef cdsOutCorner < cdsOut
             obj.paths.doc = fullfile(obj.paths.project,'doc');
             obj.paths.matlab = fullfile(obj.paths.doc,'matlab');
             obj.paths.runData = char(strjoin(obj.paths.psfLocFolders(1:11),filesep));
-%             obj.paths.testData = 
         end
         function getNetlist(obj)
-            % Get netlist
+            % getNetlist Loads the corner's netlist
+            %  Extracts the cell view name and test bench cell name from
+            %  the netlist
+            %
+            % See also: cdsOutCorner
             obj.paths.netlist = strsplit(obj.paths.psf,filesep);
             obj.paths.netlist = fullfile(char(strjoin(obj.paths.netlist(1:end-1),filesep)),'netlist', 'input.scs');
             obj.netlist = cdsOutMatlab.loadTextFile(obj.paths.netlist);
+            obj.names.cellView = obj.netlist{5}(22:end);
+            obj.names.testBenchCell = obj.netlist{4}(22:end);
         end
         function getSpectreLog(obj)
         % Get Spectre log file

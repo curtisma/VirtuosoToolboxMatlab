@@ -177,12 +177,10 @@ classdef cdsOutTest < cdsOut
 %             obj.paths.testData = 
         end
         function val = get.Done(obj)
-            if(isstruct(obj.Info) && isfield(obj.Info,'numCorners') && ~isempty(obj.corners))
-                cornersAvailable = sum(cellfun(@(x) ~isempty(x),{obj.corners.simNum}));
-                val = (cornersAvailable == obj.Info.numCorners);
+            if(isstruct(obj.Info) && isfield(obj.Info,'numCorners'))
+                val = (length(obj.corners) == obj.Info.numCorners);
             else
                 val = false;
-                warning('skyVer:cdsOutTest:get_Done','numCorners Unavailable');
             end
         end
         function val = get.analysisNames(obj)
