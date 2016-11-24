@@ -239,10 +239,10 @@ classdef cdsOut < matlab.mixin.SetGet
         % warnings and errors.  Returns the location of the log.
         %
         % USAGE
-        %  logPath = startLog(obj,resultDir)
+        %  logPath = startLogStatic(resultDir)
         %
         % See also: cdsOut
-            if(nargin == 2)
+            if(nargin == 1)
                 psfLocFolders = strsplit(varargin{1},filesep);
                 logLoc = char(strjoin({'','prj',psfLocFolders{5},'doc','matlab'},filesep));
             else
@@ -257,9 +257,6 @@ classdef cdsOut < matlab.mixin.SetGet
                 end
             else
                 logLoc = userpath;
-                if(ispc)
-                    logLoc = logLoc(1:end-1);
-                end
             end
             diary(fullfile(logLoc,'matlab.log')); % Enable MATLAB log file
         end
