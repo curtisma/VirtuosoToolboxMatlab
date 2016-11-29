@@ -106,7 +106,11 @@ classdef cdsOutTest < cdsOut
             end
             corner.test = obj;
             obj.corners(corner.simNum) = corner;
-            obj.analyses.stb.loadData(corner);
+            if(any(strcmp('stb-stb',corner.Info.availableAnalyses)))
+                if(~any(strcmp('stb-margin.stb',corner.Info.availableAnalyses)))
+                end
+                obj.analyses.stb.loadData(corner);
+            end
             obj.names = corner.names;
             obj.paths = corner.paths;
             obj.cornerDoneCnt = obj.cornerDoneCnt +1;

@@ -261,15 +261,8 @@ classdef cdsOut < matlab.mixin.SetGet
             diary(fullfile(logLoc,'matlab.log')); % Enable MATLAB log file
         end
         function libName = resultLib(result)
-        % resultLib Returns the library of the provided result.  The result
-        %  is a char path that points to either a corner result (e.g. from 
-        %  the axlCurrentResultsPath variable provided in a Cadence script)
-        %  or a path to a result folder.
+        % 
         %
-        % USAGE
-        %  libName = cdsOut.resultLib(result)
-        %
-        % See also: cdsOut
             psfLocFolders = strsplit(result,filesep);
             libName = psfLocFolders{5};
         end
