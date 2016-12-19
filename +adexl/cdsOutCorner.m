@@ -1,4 +1,4 @@
-classdef cdsOutCorner < cdsOut
+classdef corner < cdsOut
     %cdsOutCorner Cadence Simulation run results
     %   Collects the data from a single Cadence simulation corner.
     % 
@@ -14,11 +14,11 @@ classdef cdsOutCorner < cdsOut
     %
     % See Also: cdsOutCorner/cdsOutCorner, cdsOutMatlab, cdsOutRun, cdsOutTest
     properties
-        simNum
-        analyses
+        SimNum
+        Analyses
         temp
         processCorner
-        variables % sim variable values
+        Variables % sim variable values
         netlist
         names
         paths
@@ -47,7 +47,7 @@ classdef cdsOutCorner < cdsOut
                 obj.paths.psfLocFolders = strsplit(varargin{1},filesep);
                 obj.getNames(obj.paths.psfLocFolders);
                 obj.getPaths;
-                obj.simNum = str2double(obj.paths.psfLocFolders{12});
+                obj.SimNum = str2double(obj.paths.psfLocFolders{12});
             end
             % Parse Inputs
             p = inputParser;
@@ -62,9 +62,9 @@ classdef cdsOutCorner < cdsOut
             p.parse(varargin{:});
             obj.process = p.Results.process;
 %             if(~isempty(p.Results.transientSignals))
-%                 obj.analyses.transient.waveformsList = p.Results.transientSignals;
+%                 obj.Analyses.transient.waveformsList = p.Results.transientSignals;
 %             elseif(~isempty(p.Results.signals))
-%                 obj.analyses.transient.waveformsList = p.Results.signals;
+%                 obj.Analyses.transient.waveformsList = p.Results.signals;
 %             end
 %             if(~isempty(p.Results.dcSignals))
 %                 obj.Info.dc.signalList =
@@ -82,8 +82,9 @@ classdef cdsOutCorner < cdsOut
                 obj.getProcessCorner;
                 if(isunix)
                     obj.loadAnalyses;
-                    obj.getVariables;
-                    obj.temp = obj.variables.temp;
+                    obj.Variables = adexl.variables;
+                    obj.Variables.import(obj.Paths.);
+                    obj.temp = obj.Variables.temp;
                 end
                 obj.Description = [obj.processCorner '_' num2str(obj.temp) 'c'];
             end
@@ -116,10 +117,10 @@ classdef cdsOutCorner < cdsOut
         %  obj.getAnalysisProperties(analysis);
         %   places the properties in the analysis's struct
         %
-            [~,obj.analyses.(obj.analysisName(analysis)).properties.list] = evalc('cds_srr(obj.paths.psf,analysis)');
-            properties = obj.analyses.(obj.analysisName(analysis)).properties.list.prop;
+            [~,obj.Analyses.(obj.analysisName(analysis)).properties.list] = evalc('cds_srr(obj.paths.psf,analysis)');
+            properties = obj.Analyses.(obj.analysisName(analysis)).properties.list.prop;
             for i = 1:length(properties)
-                [~,obj.analyses.(obj.analysisName(analysis)).properties.(regexprep(properties{i},'\(|\)|\.| ',''))] = ...
+                [~,obj.Analyses.(obj.analysisName(analysis)).properties.(regexprep(properties{i},'\(|\)|\.| ',''))] = ...
                 evalc('cds_srr(obj.paths.psf,analysis,properties{i})');
             end
         end
@@ -149,10 +150,10 @@ classdef cdsOutCorner < cdsOut
             [~,obj.Info.datasets] = evalc('cds_srr(obj.paths.psf)');
             obj.Info.availableAnalyses = intersect(obj.Info.datasets,obj.analysisTypes);
 %             if(any(strcmp('stb-stb',obj.Info.availableAnalyses)))
-%                 obj.analyses.stb = analyses.STB(obj);
+%                 obj.Analyses.stb = Analyses.STB(obj);
 %             end
-            if(any(strcmp(analyses.DC.cdsName,obj.Info.availableAnalyses)))
-                obj.analyses.dc = analyses.DC(obj,'signals',obj.signals);
+            if(any(strcmp(Analyses.DC.cdsName,obj.Info.availableAnalyses)))
+                obj.Analyses.dc = Analyses.DC(obj,'signals',obj.signals);
             end
             if(any(strcmp('tran-tran',obj.Info.availableAnalyses)))
                 obj.getDataTransient;
@@ -206,34 +207,17 @@ classdef cdsOutCorner < cdsOut
             end
             processCorner = obj.processCorner;
         end
-        function getVariables(obj)
-        % Gets the corner's variable data
-        %
-        % USE:
-        %  obj.getVariables;
-%             obj.Info.variables = cds_srr(obj.paths.psf,'variables');
-            [~,varNames] = evalc(sprintf('cds_srr(obj.paths.psf,''variables'')'));
-            obj.Info.variables = varNames;
-            varNames = varNames.variable;
-            for i = 1:length(varNames)
-%                 obj.Info.variablesData.(regexprep(varNames{i}(1:end-6),'\(|\)|\.| ','')) = ...
-%                 cds_srr(obj.paths.psf,'variables',varNames{i});
-                [~,obj.Info.variablesData.(regexprep(varNames{i}(1:end-6),'\(|\)|\.| ',''))] = ...
-                evalc(sprintf('cds_srr(obj.paths.psf,''variables'',varNames{i})'));
-            end
-            obj.variables = obj.Info.variablesData;
-        end
         function getDataDCop(obj)
-            obj.analyses.dcOp.info = evalc(sprintf('cds_srr(obj.paths.psf,''dcOp-dc'')'));
+            obj.Analyses.dcOp.info = evalc(sprintf('cds_srr(obj.paths.psf,''dcOp-dc'')'));
         end
         function getDataTransient(obj)
-            obj.analyses.transient.info = cds_srr(obj.paths.psf,'tran-tran');
+            obj.Analyses.transient.info = cds_srr(obj.paths.psf,'tran-tran');
             % Save transient waveforms
             
-            if(isfield(obj.analyses.transient,'waveformsList') && ...
-               ~isempty(obj.analyses.transient.waveformsList))
-                for wfmNum = 1:length(obj.analyses.transient.waveformsList)
-                    obj.analyses.transient.(obj.analyses.transient.waveformsList{wfmNum}) = cds_srr(obj.paths.psf,'tran-tran',obj.analyses.transient.waveformsList{wfmNum});
+            if(isfield(obj.Analyses.transient,'waveformsList') && ...
+               ~isempty(obj.Analyses.transient.waveformsList))
+                for wfmNum = 1:length(obj.Analyses.transient.waveformsList)
+                    obj.Analyses.transient.(obj.Analyses.transient.waveformsList{wfmNum}) = cds_srr(obj.paths.psf,'tran-tran',obj.Analyses.transient.waveformsList{wfmNum});
                 end
             end
         end
@@ -290,7 +274,7 @@ classdef cdsOutCorner < cdsOut
         %   simulation results for a given corner.  This variable is
         %   provided in the workspace by adexl.
         % OUTPUTS
-        %  simNum - Simulation number assigned that is assigned to each
+        %  SimNum - Simulation number assigned that is assigned to each
         %   corner.
         % EXAMPLE
         %  Results = cdsOutMatlab.getSimNum(axlCurrentResultsPath);
