@@ -1,26 +1,26 @@
-classdef cdsOutRun < cdsOut
-    %cdsOutRun Cadence Simulation run results
+classdef result < adexl.resultsInterface
+    %result Cadence Simulation run result
     %   Collects the data from a single Cadence simulation run.
     %
     % USAGE
-    %  runObj = cdsOutRun(data,...)
+    %  runObj = adexl.result(data,...)
     %
-    %  runObj = cdsOutRun(axlCurrentResultsPath,...)
-    %  runObj = cdsOutRun(corner,...)
-    %  runObj = cdsOutRun(test,...)
+    %  runObj = adexl.result(axlCurrentResultsPath,...)
+    %  runObj = adexl.result(corner,...)
+    %  runObj = adexl.result(test,...)
     % INPUTS
     %  data- cdsOutTest or cdsOutCorner object or path to test data directory as a char
     % Parameters
     %  signals - 
     %  transientSignals - 
     %  dcSingals - 
-    %  process - process specific information
+    %  Process - process specific information
     %
     properties
-        tests
-        names
-        paths
-        process
+        Tests
+        Names
+        Paths
+        Process
     end
     properties (Transient)
         cornerDoneCnt
@@ -30,25 +30,25 @@ classdef cdsOutRun < cdsOut
     end
     
     methods
-        function obj = cdsOutRun(varargin)
+        function obj = result(varargin)
         % cdsOutRun A single simulation run
         %   See class description for usage information.
         %
         % See also: cdsOutRun
         
-            obj = obj@cdsOut(varargin{:}); % Superclass constructor
+            obj = obj@adexl.resultsInterface(varargin{:}); % Superclass constructor
             p = inputParser;
             %p.KeepUnmatched = true;
             p.addOptional('data',cdsOutTest.empty,@(x) ischar(x) || isa(x,'cdsOutCorner') || isa(x,'cdsOutTest'));
             p.addParameter('signals',[],@iscell);
             p.addParameter('transientSignals',[],@iscell);
             p.addParameter('dcSignals',[],@iscell);
-            p.addParameter('process',processes.GENERIC.empty);
+            p.addParameter('Process',processes.GENERIC.empty);
             p.parse(varargin{:});
             
             % Load a full result if a results dir is provided
             if(ischar(p.Results.data) && cdsOutRun.isResultFolder(p.Results.data))
-                obj.tests = cdsOutTest.empty;
+                obj.Tests = cdsOutTest.empty;
             	obj.loadData(varargin{:})
             % Normal corner path
             elseif(ischar(p.Results.data) || isa(p.Results.data,'cdsOutCorner'))
@@ -60,45 +60,45 @@ classdef cdsOutRun < cdsOut
                 end
                 corner.result = obj;
             elseif(isa(p.Results.data,'cdsOutTest'))
-%                 obj.paths.test = 
-                obj.tests(end+1) = p.Results.data;
+%                 obj.Paths.test = 
+                obj.Tests(end+1) = p.Results.data;
             else
-                obj.tests = cdsOutTest.empty;
+                obj.Tests = cdsOutTest.empty;
             end
             obj.cornerDoneCnt = 0;
-            if(exist('corner','var') && isempty(corner.process))
-                obj.process = p.Results.process;
+            if(exist('corner','var') && isempty(corner.Process))
+                obj.Process = p.Results.Process;
             end
         end
         function corner = addCorner(obj,corner,varargin)
             corner = addCorner@cdsOut(obj,corner,varargin{:});
             % Check that the corner corresponds to this run 
-            if(isempty(obj.tests) && ~isempty(corner))
+            if(isempty(obj.Tests) && ~isempty(corner))
             % initialize run with the properties of the given corner
-                obj.Name = corner.names.result;
-                obj.names.library = corner.names.library;
+                obj.Name = corner.Names.result;
+                obj.Names.library = corner.Names.library;
                 corner.result = obj;
-            elseif(~isempty(obj.tests) && ~isempty(corner))
-                if(~strcmp(obj.Name, corner.names.result))
+            elseif(~isempty(obj.Tests) && ~isempty(corner))
+                if(~strcmp(obj.Name, corner.Names.result))
                 % Check that this corner is for this run
                     error('VirtuosoToolbox:cdsOutTest:setCorners','Wrong test name');
                 end
             end
             % Find the corner's test or start a new one
-            if(~isempty(obj.tests))
-                selTest = strcmp({obj.tests.Name},corner.names.test);
+            if(~isempty(obj.Tests))
+                selTest = strcmp({obj.Tests.Name},corner.Names.test);
             else
                 selTest = [];
-                obj.tests = cdsOutTest.empty;
+                obj.Tests = cdsOutTest.empty;
             end
             if(isempty(selTest)||~any(selTest))
-                obj.tests(end+1) = cdsOutTest(corner,varargin{:});
+                obj.Tests(end+1) = cdsOutTest(corner,varargin{:});
             elseif(sum(selTest)==1)
-                obj.tests(selTest).addCorner(corner,varargin{:});
+                obj.Tests(selTest).addCorner(corner,varargin{:});
             else
                 error('VirtuosoToolbox:cdsOutTest:setCorners','Multiple test matches found');
             end
-            obj.process = corner.process;
+            obj.Process = corner.Process;
         end
         function loadData(obj,varargin)
         % loadData Loads data from the Cadence database using MATLAB.
@@ -135,59 +135,59 @@ classdef cdsOutRun < cdsOut
             end
         end
         function parsePath(obj)
-            obj.paths.project = char(strjoin({'','prj',obj.names.project},filesep));
-            obj.paths.doc = fullfile(obj.paths.project,'doc');
-            obj.paths.matlab = fullfile(obj.paths.doc,'matlab');
-            obj.paths.runData = char(strjoin(obj.paths.psfLocFolders(1:11),filesep));
+            obj.Paths.project = char(strjoin({'','prj',obj.Names.project},filesep));
+            obj.Paths.doc = fullfile(obj.Paths.project,'doc');
+            obj.Paths.matlab = fullfile(obj.Paths.doc,'matlab');
+            obj.Paths.runData = char(strjoin(obj.Paths.psfLocFolders(1:11),filesep));
             
-            obj.names.user = psfLocFolders{4};
-            obj.names.library = psfLocFolders{5};
+            obj.Names.user = psfLocFolders{4};
+            obj.Names.library = psfLocFolders{5};
             inUserLib = find(strcmp('adexl',psfLocFolders)) == 8;
             if(inUserLib)
-                obj.names.userLibrary = psfLocFolders{6};
+                obj.Names.userLibrary = psfLocFolders{6};
             end
-            obj.names.testBenchCell = psfLocFolders{6+inUserLib};
-            obj.names.result = psfLocFolders{10+inUserLib};
+            obj.Names.testBenchCell = psfLocFolders{6+inUserLib};
+            obj.Names.result = psfLocFolders{10+inUserLib};
             
-%             obj.names.test = psfLocFolders{12+inUserLib};
-%             obj.paths.testData = 
+%             obj.Names.test = psfLocFolders{12+inUserLib};
+%             obj.Paths.testData = 
         end
         function val = get.Done(obj)
-            if(isempty(obj.tests))
+            if(isempty(obj.Tests))
                 val = false;
             else
                 % Check to make sure all the runs are complete
-                val = all(obj.tests.Done);
+                val = all(obj.Tests.Done);
             end
         end
-        function set.tests(obj,val)
-            if(isempty(obj.tests) && ~isempty(val))
-                obj.Name = val.names.result;
+        function set.Tests(obj,val)
+            if(isempty(obj.Tests) && ~isempty(val))
+                obj.Name = val.Names.result;
             end
-            obj.tests = val;
+            obj.Tests = val;
             % initialize cdsOutMatlab with the
         end
-        function set.process(obj,val)
+        function set.Process(obj,val)
             if(ischar(val))
                 val = processes.(val);
             end
             if(~isa(val,'cdsProcess'))
                 error('VirtuosoToolbox:cdsOutRun:setProcess','Process must be subclassed from cdsProcess')
             end
-            obj.process = val;
+            obj.Process = val;
         end
         function varargout = subsref(obj,s)
         % subsref Provides customized indexing into the results property
         %
         % See also: cdsOutMatlab, cdsOutMatlab/numArgumentsFromSubscript
-            if(length(s)>=2 && strcmp(s(1).type,'.') && strcmp(s(1).subs,'tests'))
+            if(length(s)>=2 && strcmp(s(1).type,'.') && strcmp(s(1).subs,'Tests'))
                 switch s(2).type
                     case {'{}' '()'}
                         if(iscell(s(2).subs))
-                            resultIdx = strcmp(s(2).subs{1},obj.tests.Name);
+                            resultIdx = strcmp(s(2).subs{1},obj.Tests.Name);
                             if(any(resultIdx))
                                 if(length(s) == 2)
-                                    varargout = {obj.tests(resultIdx)};
+                                    varargout = {obj.Tests(resultIdx)};
                                 else
                                     varargout = {builtin('subsref',obj,s)};
                                 end
@@ -214,7 +214,7 @@ classdef cdsOutRun < cdsOut
             end
         end
         function varargout = numArgumentsFromSubscript(obj,s,indexingContext)
-            if(length(s)>=2 && strcmp(s(1).type,'.') && strcmp(s(1).subs,'tests'))
+            if(length(s)>=2 && strcmp(s(1).type,'.') && strcmp(s(1).subs,'Tests'))
                 varargout = {1};
             else
                 varargout = {builtin('numArgumentsFromSubscript',obj,s,indexingContext)};

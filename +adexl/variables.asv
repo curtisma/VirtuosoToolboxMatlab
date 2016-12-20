@@ -78,9 +78,8 @@ classdef variables < dynamicprops
         % obj.remove(name);
         %  Removes the variable with the given name
         % INPUTS
-        %  name - The name of the variable to delete (char)
-        %
-        % See Also: adexl.variables
+        %  name - the
+        
             metaProp = obj.findprop(name);
             delete(metaProp);
         end

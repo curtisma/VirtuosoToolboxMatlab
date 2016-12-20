@@ -1,4 +1,4 @@
-classdef test < cdsOut
+classdef test < adexl.resultsInterface
     %axlTest Cadence ADE XL test
     %   Defines and collects the data for a single Cadence test
     %   
@@ -30,7 +30,7 @@ classdef test < cdsOut
     end
         
     methods
-        function obj = axlTest(varargin)
+        function obj = test(varargin)
         % create a new axlTest object
         %
         % USE

@@ -1,5 +1,5 @@
-classdef corner < cdsOut
-    %cdsOutCorner Cadence Simulation run results
+classdef corner < adexl.resultsInterface
+    %corner Cadence Simulation run results
     %   Collects the data from a single Cadence simulation corner.
     % 
     % USE
@@ -16,15 +16,15 @@ classdef corner < cdsOut
     properties
         SimNum
         Analyses
-        temp
+        Temp
         processCorner
         Variables % sim variable values
-        netlist
+        Netlist
         names
         paths
         test
-        result
-        process
+        Result
+        Process
         signals
         Description
     end
@@ -35,11 +35,11 @@ classdef corner < cdsOut
     end
     
     methods
-        function obj = cdsOutCorner(varargin)
+        function obj = corner(varargin)
         % create a new cdsOutCorner object
         %
         % See also: cdsOutCorner, cdsOutTest, cdsOutRun
-            obj = obj@cdsOut(varargin{1:end}); % Superclass constructor
+            obj = obj@adexl.resultsInterface(varargin{1:end}); % Superclass constructor
             
             % Basic Information and log
             if(nargin>=1 && ~isempty(varargin{1}))
@@ -57,10 +57,10 @@ classdef corner < cdsOut
             p.addParameter('transientSignals',{},@iscell);
             p.addParameter('dcSignals',{},@iscell);
             p.addParameter('desktop',false,@islogical);
-            p.addParameter('process',processes.GENERIC.empty);
+            p.addParameter('Process',processes.GENERIC.empty);
 %             p.addParameter('test',@islogical);
             p.parse(varargin{:});
-            obj.process = p.Results.process;
+            obj.Process = p.Results.Process;
 %             if(~isempty(p.Results.transientSignals))
 %                 obj.Analyses.transient.waveformsList = p.Results.transientSignals;
 %             elseif(~isempty(p.Results.signals))
@@ -84,9 +84,9 @@ classdef corner < cdsOut
                     obj.loadAnalyses;
                     obj.Variables = adexl.variables;
                     obj.Variables.import(obj.Paths.);
-                    obj.temp = obj.Variables.temp;
+                    obj.Temp = obj.Variables.temp;
                 end
-                obj.Description = [obj.processCorner '_' num2str(obj.temp) 'c'];
+                obj.Description = [obj.processCorner '_' num2str(obj.Temp) 'c'];
             end
         end
         function signalOut = loadSignal(obj,analysis,signal)
@@ -164,7 +164,7 @@ classdef corner < cdsOut
         end
         function getNames(obj,psfLocFolders)
             obj.names.project = psfLocFolders{5};
-            obj.names.result = psfLocFolders{11};
+            obj.names.Result = psfLocFolders{11};
             obj.names.user = psfLocFolders{4};
             obj.names.library = psfLocFolders{6};
             obj.names.adexlCell = psfLocFolders{7};
@@ -182,11 +182,11 @@ classdef corner < cdsOut
             %  the netlist
             %
             % See also: cdsOutCorner
-            obj.paths.netlist = strsplit(obj.paths.psf,filesep);
-            obj.paths.netlist = fullfile(char(strjoin(obj.paths.netlist(1:end-1),filesep)),'netlist', 'input.scs');
-            obj.netlist = cdsOutMatlab.loadTextFile(obj.paths.netlist);
-            obj.names.cellView = obj.netlist{5}(22:end);
-            obj.names.testBenchCell = obj.netlist{4}(22:end);
+            obj.paths.Netlist = strsplit(obj.paths.psf,filesep);
+            obj.paths.Netlist = fullfile(char(strjoin(obj.paths.netlist(1:end-1),filesep)),'netlist', 'input.scs');
+            obj.Netlist = cdsOutMatlab.loadTextFile(obj.paths.netlist);
+            obj.names.cellView = obj.Netlist{5}(22:end);
+            obj.names.testBenchCell = obj.Netlist{4}(22:end);
         end
         function getSpectreLog(obj)
         % Get Spectre log file
@@ -231,14 +231,14 @@ classdef corner < cdsOut
 %             end
             obj.test = val;
         end
-        function set.process(obj,val)
+        function set.Process(obj,val)
             if(ischar(val))
                 val = processes.(val);
             end
             if(~isa(val,'cdsProcess'))
                 error('VirtuosoToolbox:cdsOutRun:setProcess','Process must be subclassed from cdsProcess')
             end
-            obj.process = val;
+            obj.Process = val;
         end
         function fieldName = analysisName(obj,analysis)
         % Gives the actual field name in the analysis property when an

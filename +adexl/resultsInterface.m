@@ -1,6 +1,6 @@
-classdef resultsInterface < matlab.mixin.SetGet
+classdef resultsInterface < matlab.mixin.SetGet & matlab.mixin.Copyable
     %resultsInterface An abstract class for Cadence Matlab output data handling
-    %   A class for handling corners information
+    %   A class for handling Cadence Results
     %
     % USAGE
     %  obj = obj@adexl.resultsInterface(varargin{:}); % Superclass constructor
@@ -14,8 +14,8 @@ classdef resultsInterface < matlab.mixin.SetGet
     % PROPERTIES
     %  Name - name of the adexl.resultsInterface object
     %  Info - Extra information [struct]
-    %  names - List of different names [struct]
-    %  paths - Folder paths [struct]
+    %  Names - List of different names [struct]
+    %  Paths - Folder paths [struct]
     %
     % METHODS
     %  dir  - Saves directory contents to obj.Info.dir.(dirPath)
@@ -39,8 +39,8 @@ classdef resultsInterface < matlab.mixin.SetGet
         DUT
     end
     properties (Abstract)
-        names
-        paths
+        Names
+        Paths
     end
     
     methods
@@ -71,11 +71,11 @@ classdef resultsInterface < matlab.mixin.SetGet
             if(~ischar(dirPath))
                 error('VirtuosoToolbox:cdsOutMatlab','The input must be a char path location or dir type');
             end
-            pathList = fields(obj.paths);
+            pathList = fields(obj.Paths);
             pathNameIdx = strcmp(dirPath,pathList);
             if(any(pathNameIdx))
                 dirName = pathList{pathNameIdx};
-                dirPath = obj.paths.(dirName);
+                dirPath = obj.Paths.(dirName);
                 pathDirs = strsplit(dirPath,{'/','\'});
             else
                 pathDirs = strsplit(dirPath,{'/','\'});
@@ -90,7 +90,7 @@ classdef resultsInterface < matlab.mixin.SetGet
         % Utility for finding sim results
             if(nargin > 1)
                 if(ispc)
-                    if(isempty(obj.names.user))
+                    if(isempty(obj.Names.user))
                         user =getenv('USERNAME');
 
                     end
@@ -152,10 +152,10 @@ classdef resultsInterface < matlab.mixin.SetGet
             diary(fullfile(logLoc,'matlab.log')); % Enable MATLAB log file
         end
         function getPaths(obj)
-            obj.paths.project = char(strjoin({'','prj',obj.names.project},filesep));
-            obj.paths.doc = fullfile(obj.paths.project,'doc');
-            obj.paths.matlab = fullfile(obj.paths.doc,'matlab');
-            obj.paths.runData = char(strjoin(obj.paths.psfLocFolders(1:11),filesep));
+            obj.Paths.project = char(strjoin({'','prj',obj.Names.project},filesep));
+            obj.Paths.doc = fullfile(obj.Paths.project,'doc');
+            obj.Paths.matlab = fullfile(obj.Paths.doc,'matlab');
+            obj.Paths.runData = char(strjoin(obj.Paths.psfLocFolders(1:11),filesep));
         end
     end
     methods (Static)
