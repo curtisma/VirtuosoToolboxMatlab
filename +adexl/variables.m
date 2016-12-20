@@ -1,5 +1,5 @@
 classdef variables < dynamicprops
-    %axlVariables A set of ADEXL Variables
+    %v ariables A set of ADEXL Variables
     %   Defines a set of variables for a corner, a test, or an adexl
     %   cellview. (global variables)  Each variable is defined as a
     %   property of the class.  The variable is renamed and a warning
@@ -17,8 +17,8 @@ classdef variables < dynamicprops
     %  delete - deletes a corner
     %  
     
-    properties
-        meta
+    properties (Hidden)
+        metaVariables meta.DynamicProperty
     end
     
     methods
@@ -65,7 +65,7 @@ classdef variables < dynamicprops
                     warning('skyVer:axlVariables:add',...
                     ['Variable name "' name '" is not a valid matlab identifier and will be replaced with "' varName '"']);
                 end
-                obj.addprop(name);
+                obj.metaVariables(end+1) = obj.addprop(name);
                 obj.(name) = value;
             else
                 error('skyVer:axlVariables:add',...
