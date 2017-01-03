@@ -1,18 +1,23 @@
 classdef test < adexl.resultsInterface
-    %axlTest Cadence ADE XL test
+    %test Cadence ADE XL test
     %   Defines and collects the data for a single Cadence test
     %   
     % USAGE
-    %  obj = adexl.test(Result, corner ...)
+    %  obj = adexl.test(corner ...)
     % INPUTS
     %  Corner - First corner for this test [cdsOutCorner](optional)
+
+    % PARAMETERS
     %  Result - Cadence run for this test [cdsOutRun](optional)
-    %  signals - defines the signals to save
+    %  desktop - Opens a new desktop if one isn't open yet (logical)
+    %
+    % See also: adexl.corner, adexl.test, adexl.result, adexl.cellview
+    
+     %  signals - defines the signals to save
     %  transientSignals - defines the signals to save only for a
     %   transient analysis
     %  dcSignals - defines the signals to save only for a
-    %   dc analysis
-    %  desktop - Opens a new desktop if one isn't open yet (logical)
+    %   dc analysis`
     properties
         Analyses
         Corners % An array of cdsOutCorners arranged by simNum
@@ -31,23 +36,9 @@ classdef test < adexl.resultsInterface
         
     methods
         function obj = test(varargin)
-        % create a new axlTest object
+        %test create a new ADEXL test object
         %
-        % USE
-        %  obj = cdsOutCorners(Corner,Result,...)
-        %
-        % INPUTS
-        %  Corner - First corner for this test [cdsOutCorner](optional)
-        %  Result - Cadence run for this test [cdsOutRun](optional)
-        % PARAMETERS
-        %  signals - defines the signals to save
-        %  transientSignals - defines the signals to save only for a
-        %   transient analysis
-        %  dcSignals - defines the signals to save only for a
-        %   dc analysis
-        %  desktop - Opens a new desktop if one isn't open yet (logical)
-        %
-        % See also: cdsOutCorner, cdsOutTest, cdsOutRun
+        % See also: adexl.test
         
 %             obj@cdsOut(
 %             if(isa(varargin{1},'cdsOutCorner'))
@@ -65,24 +56,24 @@ classdef test < adexl.resultsInterface
 %             else
 %                 obj = obj@cdsOut(varargin{:}); % Superclass constructor
 %             end
+            obj = obj@adexl.resultsInterface(varargin{:}); % Superclass constructor
             p = inputParser;
             p.KeepUnmatched = true;
-            p.addOptional('corner',cdsOutCorner.empty,@(x) isa(x,'cdsOutCorner'));
-            p.addOptional('Result',cdsOutRun.empty,@(x) isa(x,'cdsOutRun'));
+            p.addOptional('corner',adexl.corner.empty,@(x) isa(x,'adexl.corner'));
+%             p.addOptional('Result',cdsOutRun.empty,@(x) isa(x,'cdsOutRun'));
+            p.addParameter('Analyses',analyses.DC.empty,@(x) isa(x,'analyses.analysisInterface'));
             p.parse(varargin{:});
             obj.CornerDoneCnt = 0;
             
             % Add first corner
-            obj.Corners = cdsOutCorner.empty;
-            obj.Analyses = struct;
-            obj.Analyses.stb = Analyses.STB;
+            obj.Corners = adexl.corner.empty;
+            obj.Analyses = p.Results.Analyses;
             if(~isempty(p.Results.corner))
                 if(nargin >1)
                     obj.addCorner(p.Results.corner,varargin{2:end});
                 else
                     obj.addCorner(p.Results.corner);
                 end
-                
             end
         end
         function set.Corners(obj,val)
@@ -93,8 +84,8 @@ classdef test < adexl.resultsInterface
 % %                 end
 %                 val.test = obj;
 %             end
-            if(~isa(val,'cdsOutCorner'))
-                error('VirtuosoToolbox:cdsOutTest:addCorner','corner must be a cdsOutCorner');
+            if(~isa(val,'adexl.corner'))
+                error('VirtuosoToolbox:adexlTest:addCorner','corner must be a cdsOutCorner');
             end
             obj.Corners = val;
 %             if(exist('obj.Info.corner','var') && isempty(obj.Info.corner))

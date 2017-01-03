@@ -11,8 +11,13 @@ classdef corner < adexl.resultsInterface
     %  dcSignals - defines the signals to save only for a
     %   dc analysis
     %  desktop - Opens a new desktop if one isn't open yet (logical)
-    %
-    % See Also: cdsOutCorner/cdsOutCorner, cdsOutMatlab, cdsOutRun, cdsOutTest
+    % PARAMETERS & PROPERTIES
+    %  Name - Name of the corner [char]
+    %  ProcessCorner - Name of the current process corner [char]
+    %  Temp - Temperature [numerical]
+    %  Variables - Other Variables to be varied [adexl.variables]
+    %  Test - The tests enabled for this corner [adexl.test]
+    % See Also: adexl.test, adexl.cellview, adexl.result, adexl.cornerSet
     properties
         SimNum
         Analyses
@@ -20,8 +25,8 @@ classdef corner < adexl.resultsInterface
         processCorner
         Variables % sim variable values
         Netlist
-        names
-        paths
+        Names
+        Paths
         test
         Result
         Process
@@ -36,18 +41,18 @@ classdef corner < adexl.resultsInterface
     
     methods
         function obj = corner(varargin)
-        % create a new cdsOutCorner object
+        %corner Create a new adexl.corner object
         %
-        % See also: cdsOutCorner, cdsOutTest, cdsOutRun
+        % See also: adexl.corner
             obj = obj@adexl.resultsInterface(varargin{1:end}); % Superclass constructor
             
             % Basic Information and log
             if(nargin>=1 && ~isempty(varargin{1}))
-                obj.paths.psf = char(varargin{1});
-                obj.paths.psfLocFolders = strsplit(varargin{1},filesep);
-                obj.getNames(obj.paths.psfLocFolders);
+                obj.Paths.psf = char(varargin{1});
+                obj.Paths.psfLocFolders = strsplit(varargin{1},filesep);
+                obj.getNames(obj.Paths.psfLocFolders);
                 obj.getPaths;
-                obj.SimNum = str2double(obj.paths.psfLocFolders{12});
+                obj.SimNum = str2double(obj.Paths.psfLocFolders{12});
             end
             % Parse Inputs
             p = inputParser;
@@ -58,6 +63,12 @@ classdef corner < adexl.resultsInterface
             p.addParameter('dcSignals',{},@iscell);
             p.addParameter('desktop',false,@islogical);
             p.addParameter('Process',processes.GENERIC.empty);
+            % Setup Parameters
+            p.addParameter('Name','',@ischar);
+            p.addParameter('ProcessCorner','',@ischar);
+            p.addParameter('Temp',[],@isnumeric);
+            p.addParameter('Variables',adexl.variables.empty,@(x) isa(x,'adexl.variables'));
+            p.addParameter('Test',adexl.test.empty,@(x) isa(x,'adexl.test'));
 %             p.addParameter('test',@islogical);
             p.parse(varargin{:});
             obj.Process = p.Results.Process;
@@ -74,7 +85,7 @@ classdef corner < adexl.resultsInterface
 %                 obj.Info.dc.signalList = p.Results.signals;
 %             end
             obj.signals = p.Results.signals;
-            
+            obj.Name = p.Results.Name;
             % Get files
             if(nargin>=1 && ~isempty(varargin{1}))
                 obj.getNetlist;
@@ -83,10 +94,20 @@ classdef corner < adexl.resultsInterface
                 if(isunix)
                     obj.loadAnalyses;
                     obj.Variables = adexl.variables;
-                    obj.Variables.import(obj.Paths.);
+%                     obj.Variables.import(obj.Paths.);
                     obj.Temp = obj.Variables.temp;
                 end
                 obj.Description = [obj.processCorner '_' num2str(obj.Temp) 'c'];
+            end
+            % Setup parameters
+            if(~isempty(p.Results.ProcessCorner))
+                obj.ProcessCorner = p.Results.ProcessCorner;
+            end
+            if(~isempty(p.Results.Temp))
+                obj.ProcessCorner = p.Results.Temp;
+            end
+            if(~isempty(p.Results.Variables))
+                obj.ProcessCorner = p.Results.Variables;
             end
         end
         function signalOut = loadSignal(obj,analysis,signal)
@@ -107,7 +128,7 @@ classdef corner < adexl.resultsInterface
                 otherwise
                     warning('Wrong or unsupported analysis type');
             end
-        	[~, signalOut] = evalc('cds_srr( obj.paths.psf, cdsAnalysisName, signal)');
+        	[~, signalOut] = evalc('cds_srr( obj.Paths.psf, cdsAnalysisName, signal)');
             obj.data.(analysis).(signal) = signalOut;
         end
         function getAnalysisProperties(obj,analysis)
@@ -117,11 +138,11 @@ classdef corner < adexl.resultsInterface
         %  obj.getAnalysisProperties(analysis);
         %   places the properties in the analysis's struct
         %
-            [~,obj.Analyses.(obj.analysisName(analysis)).properties.list] = evalc('cds_srr(obj.paths.psf,analysis)');
+            [~,obj.Analyses.(obj.analysisName(analysis)).properties.list] = evalc('cds_srr(obj.Paths.psf,analysis)');
             properties = obj.Analyses.(obj.analysisName(analysis)).properties.list.prop;
             for i = 1:length(properties)
                 [~,obj.Analyses.(obj.analysisName(analysis)).properties.(regexprep(properties{i},'\(|\)|\.| ',''))] = ...
-                evalc('cds_srr(obj.paths.psf,analysis,properties{i})');
+                evalc('cds_srr(obj.Paths.psf,analysis,properties{i})');
             end
         end
         function getDatasetProperties(obj,dataset)
@@ -137,17 +158,17 @@ classdef corner < adexl.resultsInterface
             if(~isfield(obj.Info.datasetProperties,dataset))
                 obj.Info.datasetProperties.(datset) = struct;
             end
-            [~,obj.Info.datsetProperties.(datset).list] = evalc('cds_srr(obj.paths.psf,dataset)');
+            [~,obj.Info.datsetProperties.(datset).list] = evalc('cds_srr(obj.Paths.psf,dataset)');
             properties = obj.Info.datsetProperties.(datset).list.prop;
             for i = 1:length(properties)
                 [~,obj.Info.datsetProperties.(datset).(regexprep(properties{i},'\(|\)|\.| ',''))] = ...
-                evalc('cds_srr(obj.paths.psf,dataset,properties{i})');
+                evalc('cds_srr(obj.Paths.psf,dataset,properties{i})');
             end
         end
         function loadAnalyses(obj)
         % Loads all analyses
-%             obj.Info.datasets = cds_srr(obj.paths.psf);
-            [~,obj.Info.datasets] = evalc('cds_srr(obj.paths.psf)');
+%             obj.Info.datasets = cds_srr(obj.Paths.psf);
+            [~,obj.Info.datasets] = evalc('cds_srr(obj.Paths.psf)');
             obj.Info.availableAnalyses = intersect(obj.Info.datasets,obj.analysisTypes);
 %             if(any(strcmp('stb-stb',obj.Info.availableAnalyses)))
 %                 obj.Analyses.stb = Analyses.STB(obj);
@@ -163,18 +184,18 @@ classdef corner < adexl.resultsInterface
             end
         end
         function getNames(obj,psfLocFolders)
-            obj.names.project = psfLocFolders{5};
-            obj.names.Result = psfLocFolders{11};
-            obj.names.user = psfLocFolders{4};
-            obj.names.library = psfLocFolders{6};
-            obj.names.adexlCell = psfLocFolders{7};
-            obj.names.test = psfLocFolders{13};
+            obj.Names.project = psfLocFolders{5};
+            obj.Names.Result = psfLocFolders{11};
+            obj.Names.user = psfLocFolders{4};
+            obj.Names.library = psfLocFolders{6};
+            obj.Names.adexlCell = psfLocFolders{7};
+            obj.Names.test = psfLocFolders{13};
         end
         function getPaths(obj)
-            obj.paths.project = char(strjoin({'','prj',obj.names.project},filesep));
-            obj.paths.doc = fullfile(obj.paths.project,'doc');
-            obj.paths.matlab = fullfile(obj.paths.doc,'matlab');
-            obj.paths.runData = char(strjoin(obj.paths.psfLocFolders(1:11),filesep));
+            obj.Paths.project = char(strjoin({'','prj',obj.Names.project},filesep));
+            obj.Paths.doc = fullfile(obj.Paths.project,'doc');
+            obj.Paths.matlab = fullfile(obj.Paths.doc,'matlab');
+            obj.Paths.runData = char(strjoin(obj.Paths.psfLocFolders(1:11),filesep));
         end
         function getNetlist(obj)
             % getNetlist Loads the corner's netlist
@@ -182,22 +203,22 @@ classdef corner < adexl.resultsInterface
             %  the netlist
             %
             % See also: cdsOutCorner
-            obj.paths.Netlist = strsplit(obj.paths.psf,filesep);
-            obj.paths.Netlist = fullfile(char(strjoin(obj.paths.netlist(1:end-1),filesep)),'netlist', 'input.scs');
-            obj.Netlist = cdsOutMatlab.loadTextFile(obj.paths.netlist);
-            obj.names.cellView = obj.Netlist{5}(22:end);
-            obj.names.testBenchCell = obj.Netlist{4}(22:end);
+            obj.Paths.Netlist = strsplit(obj.Paths.psf,filesep);
+            obj.Paths.Netlist = fullfile(char(strjoin(obj.Paths.netlist(1:end-1),filesep)),'netlist', 'input.scs');
+            obj.Netlist = cdsOutMatlab.loadTextFile(obj.Paths.netlist);
+            obj.Names.cellView = obj.Netlist{5}(22:end);
+            obj.Names.testBenchCell = obj.Netlist{4}(22:end);
         end
         function getSpectreLog(obj)
         % Get Spectre log file
-            obj.paths.spectreLog = fullfile(obj.paths.psf,'spectre.out');
-            obj.Info.log = cdsOutMatlab.loadTextFile(obj.paths.spectreLog);
+            obj.Paths.spectreLog = fullfile(obj.Paths.psf,'spectre.out');
+            obj.Info.log = cdsOutMatlab.loadTextFile(obj.Paths.spectreLog);
         end
         function processCorner = getProcessCorner(obj)
         % Get the model information
-            obj.paths.modelFileInfo = strsplit(obj.paths.psf,filesep);
-            obj.paths.modelFileInfo = fullfile(char(strjoin(obj.paths.modelFileInfo(1:end-1),filesep)),'netlist', '.modelFiles');
-            obj.Info.modelFileInfo = cdsOutMatlab.loadTextFile(obj.paths.modelFileInfo);
+            obj.Paths.modelFileInfo = strsplit(obj.Paths.psf,filesep);
+            obj.Paths.modelFileInfo = fullfile(char(strjoin(obj.Paths.modelFileInfo(1:end-1),filesep)),'netlist', '.modelFiles');
+            obj.Info.modelFileInfo = cdsOutMatlab.loadTextFile(obj.Paths.modelFileInfo);
             if(~isempty(obj.Info.modelFileInfo) && (length(obj.Info.modelFileInfo)==1))
                 obj.processCorner = obj.Info.modelFileInfo{1}(strfind(obj.Info.modelFileInfo{1},'section=')+8:end);
             elseif(~isempty(obj.Info.modelFileInfo))
@@ -208,16 +229,16 @@ classdef corner < adexl.resultsInterface
             processCorner = obj.processCorner;
         end
         function getDataDCop(obj)
-            obj.Analyses.dcOp.info = evalc(sprintf('cds_srr(obj.paths.psf,''dcOp-dc'')'));
+            obj.Analyses.dcOp.info = evalc(sprintf('cds_srr(obj.Paths.psf,''dcOp-dc'')'));
         end
         function getDataTransient(obj)
-            obj.Analyses.transient.info = cds_srr(obj.paths.psf,'tran-tran');
+            obj.Analyses.transient.info = cds_srr(obj.Paths.psf,'tran-tran');
             % Save transient waveforms
             
             if(isfield(obj.Analyses.transient,'waveformsList') && ...
                ~isempty(obj.Analyses.transient.waveformsList))
                 for wfmNum = 1:length(obj.Analyses.transient.waveformsList)
-                    obj.Analyses.transient.(obj.Analyses.transient.waveformsList{wfmNum}) = cds_srr(obj.paths.psf,'tran-tran',obj.Analyses.transient.waveformsList{wfmNum});
+                    obj.Analyses.transient.(obj.Analyses.transient.waveformsList{wfmNum}) = cds_srr(obj.Paths.psf,'tran-tran',obj.Analyses.transient.waveformsList{wfmNum});
                 end
             end
         end
@@ -226,7 +247,7 @@ classdef corner < adexl.resultsInterface
             if(~isa(val,'cdsOutTest'))
                 error('VirtuosoToolbox:cdsOutCorner:set_test','test needs to be a cdsOutTest object')
             end
-%             if(~strcmp(obj.names.test,val.name))
+%             if(~strcmp(obj.Names.test,val.name))
 %                 error('VirtuosoToolbox:cdsOutCorner:set_test','test does not match the test of this corner')
 %             end
             obj.test = val;
@@ -284,6 +305,9 @@ classdef corner < adexl.resultsInterface
         % see also:
             psfLocFolders = strsplit(axlCurrentResultsPath,filesep);
             simNum = str2double(psfLocFolders{12});
+        end
+        function loadSTC()
+        %loadSTC Loads a set of corners from a 
         end
     end
 end

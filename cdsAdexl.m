@@ -1,6 +1,6 @@
-classdef cdsAdexl
-    %cdsAdexl An ADE-XL state
-    %   An Ades-XL state that can be written to a 
+classdef cellview
+    %adexl.cellview An ADE-XL cellview
+    %   An cellview
     
     properties
         cell
@@ -11,8 +11,13 @@ classdef cdsAdexl
     end
     
     methods
-        function obj = cdsAdexl(cell)
+        function obj = cdsAdexl(cell,varargin)
             obj.cell.name = cellName;
+        end
+        function loadSTC(STC,varargin)
+            % Load Tests
+            %  Each test is a line in the STC file
+            
         end
         function addTest(test)
             

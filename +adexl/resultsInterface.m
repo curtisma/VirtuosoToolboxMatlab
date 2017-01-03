@@ -4,7 +4,7 @@ classdef resultsInterface < matlab.mixin.SetGet & matlab.mixin.Copyable
     %
     % USAGE
     %  obj = obj@adexl.resultsInterface(varargin{:}); % Superclass constructor
-    %  obj = cdsOutSubClass([data],...)
+    %  obj = resultsInterfaceSubClass([data],...)
     % INPUTS
     %  data (optional) - A path to the dataset or a object of adexl.resultsInterface
     %   subclass
@@ -32,7 +32,7 @@ classdef resultsInterface < matlab.mixin.SetGet & matlab.mixin.Copyable
     %  isResultFolder - Determines if a path is a full result dataset (true) 
     %   or a corner dataset (false)
     %
-    % See also: cdsOutRun,cdsOutTest,cdsOutCorner
+    % See also: adexl.result,adexl.test,adexl.corner
     properties
         Name
         Info
@@ -45,6 +45,11 @@ classdef resultsInterface < matlab.mixin.SetGet & matlab.mixin.Copyable
     
     methods
         function obj = resultsInterface(varargin)
+        %resultsInterface Provides a common interface for each of the
+        % results class's (adexl.result,adexl.test,adexl.corner)
+        % constructor
+        %
+        % See Also: adexl.resultsInterface
             % Parse Inputs
             p = inputParser;
             p.KeepUnmatched = true;
@@ -203,7 +208,7 @@ classdef resultsInterface < matlab.mixin.SetGet & matlab.mixin.Copyable
                 fclose(fid);
             else
                 disp(errorMessage);
-                disp(['Could not open ' path  sprintf('\n') errorMessage]);
+                warning('loadTextFile:CouldNotOpen',['Could not open ' path  sprintf('\n') errorMessage]);
 
                 out = '';
             end

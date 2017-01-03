@@ -38,6 +38,13 @@ classdef cdsCell < cdsCellAbstract
             end
             obj.Library = val;
         end
+        function create(obj)
+        %create Creates a new cellview in the Cadence database
+        % 
+        if(isempty(obj.library) || isempty(obj.Name))
+            error('VirtuosoToolbox:cdsCell:FullDefinition','Need to define the library and cell names');
+        end
+        
     end
     
 end
