@@ -8,7 +8,7 @@ classdef variables < dynamicprops
     % USAGE
     %  varObj = adexl.variables('VariableName',VariableValue,...)
     %  varObj = adexl.variables({'VariableName1','VariableName2',...},...
-    %                           {VariableValue1,  VariableValue2,...})
+    %                           
     %  TO DO: (not implemented)                            
     %  varObj = adexl.variables(resultsDir,'VariableName',VariableValue,...)
     % EXAMPLE
@@ -33,8 +33,7 @@ classdef variables < dynamicprops
                 error('skyVer:adexl_variables:Constructor',...
                  'Even number of inputs.  User must supply variable-value and parameter-value pairs.');
             end
-            if((nargin == 2) && iscell(varargin{1}))
-                obj.add(varargin{1},varargin{2});
+            if((nargin == 2) && is
             elseif(nargin>1)
             % Add the specified variables
 %             cellfun(@(x,y) obj.add(x,y),varargin(1:2:end),varargin(2:2:end));
