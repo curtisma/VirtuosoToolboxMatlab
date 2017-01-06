@@ -3,7 +3,7 @@ classdef cellview < matlab.mixin.SetGet & matlab.mixin.Copyable
     %   represents an ADEXL cellview
     %
     % USAGE
-    %  adexl = 
+    %  adexl = adexl.cellview
     % INPUTS
     %  Cell - Cell which contains this Adexl view cdsCell
     % PARAMETERS & PROPERTIES
@@ -11,7 +11,7 @@ classdef cellview < matlab.mixin.SetGet & matlab.mixin.Copyable
     % See Also: adexl.test, adexl.corner
     
     properties
-        Cell cdsCell % Cell which contains this Adexl view
+        Cell % Cell which contains this Adexl view
         Tests adexl.test % ADE L Tests
         
 %         CornerSets
@@ -28,7 +28,7 @@ classdef cellview < matlab.mixin.SetGet & matlab.mixin.Copyable
         % See also: adexl.corner
             p = inputParser;
             p.KeepUnmatched = true;
-            p.addRequired('cell',@(x) isa(x,'cdsCell'));
+            p.addRequired('cell',@(x) isa(x,'cdsCellAbstract'));
 
             % Setup Parameters
 %             p.addParameter('ProcessCorner','',@ischar);
@@ -51,6 +51,9 @@ classdef cellview < matlab.mixin.SetGet & matlab.mixin.Copyable
 %         function writeOutputs(file)
 %             
 %         end
+        function ocnOut = exportOcean(obj,varargin)
+%             ocnOut{1} = 
+        end
     end
     
 end

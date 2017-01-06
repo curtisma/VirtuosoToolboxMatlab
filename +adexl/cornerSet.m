@@ -14,11 +14,18 @@ classdef cornerSet
     end
     
     methods
-        function obj = cornerSet(varargin)
-        
-            if(isa(varargin{1},'skySTC'))
-                
-            end
+        function obj = cornerSet(Name,varargin)
+        %cornerSet create a new ADEXL cornerSet object
+        %
+        % See also: adexl.cornerSet
+            p = inputParser;
+%             p.KeepUnmatched = true;
+            p.addOptional('Name','',@ischar);
+            p.addOptional('Corners','',@(x) isa(x,'adexl.corner'));
+%             p.addParameter('DUT',cdscell.empty,@(x) isa(x,'cdsCell'));
+            p.parse(varargin{:});
+            obj.Name = p.Results.Name;
+            obj.Corners = p.Results.Corners;
         end
         function export(obj,file)
         % export Exports the corners to an XML document.  This

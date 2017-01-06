@@ -9,8 +9,9 @@ classdef test < adexl.resultsInterface
 
     % PARAMETERS
     %  Result - Cadence run for this test [cdsOutRun](optional)
-    %  desktop - Opens a new desktop if one isn't open yet (logical)
-    %
+    %  Desktop - Opens a new desktop if one isn't open yet (logical)
+    % Parameters  & Properties
+    %  Design - The design to be simulated [skyCell or cdsCell]
     % See also: adexl.corner, adexl.test, adexl.result, adexl.cellview
     
      %  signals - defines the signals to save
@@ -19,12 +20,16 @@ classdef test < adexl.resultsInterface
     %  dcSignals - defines the signals to save only for a
     %   dc analysis`
     properties
+        Design
         Analyses
         Corners % An array of cdsOutCorners arranged by simNum
         Result
         Names
         Paths
         Process
+    end
+    properties (Constant)
+        Simulator = 'spectre';
     end
     properties (Transient)
         CornerDoneCnt
@@ -62,12 +67,15 @@ classdef test < adexl.resultsInterface
             p.addOptional('corner',adexl.corner.empty,@(x) isa(x,'adexl.corner'));
 %             p.addOptional('Result',cdsOutRun.empty,@(x) isa(x,'cdsOutRun'));
             p.addParameter('Analyses',analyses.DC.empty,@(x) isa(x,'analyses.analysisInterface'));
+            p.addParameter('Corners',adexl.corner.empty,@(x) isa(x,'adexl.corner'));
+            p.addParameter('Design',cdsCell.empty,@(x) isa(x,'cdsCell'));
             p.parse(varargin{:});
             obj.CornerDoneCnt = 0;
             
             % Add first corner
-            obj.Corners = adexl.corner.empty;
+            obj.Corners = p.Results.Corners;
             obj.Analyses = p.Results.Analyses;
+            obj.Design = p.Results.Design;
             if(~isempty(p.Results.corner))
                 if(nargin >1)
                     obj.addCorner(p.Results.corner,varargin{2:end});
@@ -85,7 +93,7 @@ classdef test < adexl.resultsInterface
 %                 val.test = obj;
 %             end
             if(~isa(val,'adexl.corner'))
-                error('VirtuosoToolbox:adexlTest:addCorner','corner must be a cdsOutCorner');
+                error('VirtuosoToolbox:adexlTest:addCorner','corner must be a adexl.corner');
             end
             obj.Corners = val;
 %             if(exist('obj.Info.corner','var') && isempty(obj.Info.corner))
@@ -222,6 +230,24 @@ classdef test < adexl.resultsInterface
                 error('VirtuosoToolbox:cdsOutRun:setProcess','Process must be subclassed from cdsProcess')
             end
             obj.Process = val;
+        end
+        function ocnOut = ocean(obj)
+        %ocean Creates a set of ocean commands to create the test
+        %   Returns a cell array of ocean commands for creating the test in
+        %   a Cadence Adexl view
+        %   Currently assumes the cellview to be simulated is a config view
+        %
+            ocnOut{1} = [';---------- Test "' obj.Name '" -------------'];
+            ocnOut{2} = ['ocnxlBeginTest("' obj.Design.Library.UserLibraryName '" "' obj.Design.Name '" "config")'];
+            ocnOut{3} = ['simulator(''' obj.Simulator ')'];
+            ocnOut{3} = ['design( "' obj.Cell ')'];
+            analysisOcn = obj.analyses.exportOcn;
+            ocnOut = [ocnOut; analysisOcn];
+            ocnOut{end+1} = sprintf('envOption(\n\t''emirSumList nil\n\t''analysisOrder list("dc" "pz" "dcmatch" "stb" "tran" "envlp" "ac" "lf" "noise" "xf" "sp" "pss" "pac" "pstb" "pnoise" "pxf" "psp" "qpss" "qpac" "qpnoise" "qpxf" "qpsp" "hb" "hbac" "hbnoise" "sens" "acmatch")');
+            ocnOut{end+1} = sprintf('option( ?categ ''turboOpts\n\t''preserveOption  "None"\n)');
+            
+            ocnOut{end+1} = sprintf(['ocnxlEndTest() ; "' obj.Name '"']);
+            ocnOut{end+1} = '';
         end
     end
     

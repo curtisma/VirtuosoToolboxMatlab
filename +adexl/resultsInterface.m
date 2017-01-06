@@ -54,12 +54,14 @@ classdef resultsInterface < matlab.mixin.SetGet & matlab.mixin.Copyable
             p = inputParser;
             p.KeepUnmatched = true;
             p.addOptional('data',[],@(x) ischar(x) || isa(x,'adexl.resultsInterface'));
-            p.addParameter('desktop',false,@islogical);
+            p.addParameter('Desktop',false,@islogical);
+            p.addParameter('Name','',@ischar);
 %             p.addParameter('DUT',cdscell.empty,@(x) isa(x,'cdsCell'));
             p.parse(varargin{:});
             
+            obj.Name = p.Results.Name;
             % start desktop (optional)
-            if(p.Results.desktop)
+            if(p.Results.Desktop)
                 obj.startDesktop
             end
         end

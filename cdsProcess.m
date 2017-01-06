@@ -5,7 +5,8 @@ classdef cdsProcess < matlab.mixin.SetGet
     properties (Constant, Abstract)
 %         cornerLoc    % location of the corners directory
         Description    % Description of the process
-        VariableNames  % Process Specific Variables
+        Variables  % Process Specific Variables
+        ModelPath      % Path to the simulation models
 %         vars_version % Release number for the variables.
     end
     

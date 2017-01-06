@@ -22,7 +22,7 @@ classdef corner < adexl.resultsInterface
         SimNum
         Analyses
         Temp
-        processCorner
+        ProcessCorner
         Variables % sim variable values
         Netlist
         Names
@@ -97,17 +97,17 @@ classdef corner < adexl.resultsInterface
 %                     obj.Variables.import(obj.Paths.);
                     obj.Temp = obj.Variables.temp;
                 end
-                obj.Description = [obj.processCorner '_' num2str(obj.Temp) 'c'];
+                obj.Description = [obj.ProcessCorner '_' num2str(obj.Temp) 'c'];
             end
             % Setup parameters
             if(~isempty(p.Results.ProcessCorner))
                 obj.ProcessCorner = p.Results.ProcessCorner;
             end
             if(~isempty(p.Results.Temp))
-                obj.ProcessCorner = p.Results.Temp;
+                obj.Temp = p.Results.Temp;
             end
             if(~isempty(p.Results.Variables))
-                obj.ProcessCorner = p.Results.Variables;
+                obj.Variables = p.Results.Variables;
             end
         end
         function signalOut = loadSignal(obj,analysis,signal)
@@ -214,19 +214,19 @@ classdef corner < adexl.resultsInterface
             obj.Paths.spectreLog = fullfile(obj.Paths.psf,'spectre.out');
             obj.Info.log = cdsOutMatlab.loadTextFile(obj.Paths.spectreLog);
         end
-        function processCorner = getProcessCorner(obj)
+        function ProcessCorner = getProcessCorner(obj)
         % Get the model information
             obj.Paths.modelFileInfo = strsplit(obj.Paths.psf,filesep);
             obj.Paths.modelFileInfo = fullfile(char(strjoin(obj.Paths.modelFileInfo(1:end-1),filesep)),'netlist', '.modelFiles');
             obj.Info.modelFileInfo = cdsOutMatlab.loadTextFile(obj.Paths.modelFileInfo);
             if(~isempty(obj.Info.modelFileInfo) && (length(obj.Info.modelFileInfo)==1))
-                obj.processCorner = obj.Info.modelFileInfo{1}(strfind(obj.Info.modelFileInfo{1},'section=')+8:end);
+                obj.ProcessCorner = obj.Info.modelFileInfo{1}(strfind(obj.Info.modelFileInfo{1},'section=')+8:end);
             elseif(~isempty(obj.Info.modelFileInfo))
-                obj.processCorner = 'NOM';
+                obj.ProcessCorner = 'NOM';
             else
-                obj.processCorner = '';
+                obj.ProcessCorner = '';
             end
-            processCorner = obj.processCorner;
+            ProcessCorner = obj.ProcessCorner;
         end
         function getDataDCop(obj)
             obj.Analyses.dcOp.info = evalc(sprintf('cds_srr(obj.Paths.psf,''dcOp-dc'')'));
