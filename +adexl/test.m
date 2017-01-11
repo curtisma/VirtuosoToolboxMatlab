@@ -22,11 +22,13 @@ classdef test < adexl.resultsInterface
     properties
         Design
         Analyses
+        CornerSet
         Corners % An array of cdsOutCorners arranged by simNum
         Result
         Names
         Paths
         Process
+        Variables
     end
     properties (Constant)
         Simulator = 'spectre';
@@ -68,14 +70,18 @@ classdef test < adexl.resultsInterface
 %             p.addOptional('Result',cdsOutRun.empty,@(x) isa(x,'cdsOutRun'));
             p.addParameter('Analyses',analyses.DC.empty,@(x) isa(x,'analyses.analysisInterface'));
             p.addParameter('Corners',adexl.corner.empty,@(x) isa(x,'adexl.corner'));
-            p.addParameter('Design',cdsCell.empty,@(x) isa(x,'cdsCell'));
+            p.addParameter('CornerSet',adexl.corner.empty,@(x) isa(x,'adexl.cornerSet'));
+            p.addParameter('Design',cdsCell.empty,@(x) isa(x,'cdsCellAbstract'));
+            p.addParameter('Variables',adexl.variables.empty,@(x) isa(x,'adexl.variables'));
             p.parse(varargin{:});
             obj.CornerDoneCnt = 0;
             
             % Add first corner
             obj.Corners = p.Results.Corners;
+            obj.CornerSet = p.Results.CornerSet;
             obj.Analyses = p.Results.Analyses;
             obj.Design = p.Results.Design;
+            obj.Variables = p.Results.Variables;
             if(~isempty(p.Results.corner))
                 if(nargin >1)
                     obj.addCorner(p.Results.corner,varargin{2:end});
@@ -238,14 +244,15 @@ classdef test < adexl.resultsInterface
         %   Currently assumes the cellview to be simulated is a config view
         %
             ocnOut{1} = [';---------- Test "' obj.Name '" -------------'];
-            ocnOut{2} = ['ocnxlBeginTest("' obj.Design.Library.UserLibraryName '" "' obj.Design.Name '" "config")'];
-            ocnOut{3} = ['simulator(''' obj.Simulator ')'];
-            ocnOut{3} = ['design( "' obj.Cell ')'];
-            analysisOcn = obj.analyses.exportOcn;
-            ocnOut = [ocnOut; analysisOcn];
+            ocnOut{2} = ['ocnxlBeginTest( "' obj.Design.Name '")'];
+            ocnOut{3} = ['simulator(' '' obj.Simulator ')'];
+            ocnOut{4} = ['design("' obj.Design.Library.UserLibraryName '" "' obj.Design.Name '" "config")'];
+            ocnOut = [ocnOut'; obj.Design.Library.Process.OceanModelPath]; % Model Path
+            ocnOut = [ocnOut; obj.Design.Library.Process.OceanNomModelFile]; % Nominal Model File Information
+            ocnOut = [ocnOut; obj.Analyses.ocean]; % Analysis commands
+            ocnOut = [ocnOut; obj.Variables.ocean('test')]; % Design Variables
             ocnOut{end+1} = sprintf('envOption(\n\t''emirSumList nil\n\t''analysisOrder list("dc" "pz" "dcmatch" "stb" "tran" "envlp" "ac" "lf" "noise" "xf" "sp" "pss" "pac" "pstb" "pnoise" "pxf" "psp" "qpss" "qpac" "qpnoise" "qpxf" "qpsp" "hb" "hbac" "hbnoise" "sens" "acmatch")');
             ocnOut{end+1} = sprintf('option( ?categ ''turboOpts\n\t''preserveOption  "None"\n)');
-            
             ocnOut{end+1} = sprintf(['ocnxlEndTest() ; "' obj.Name '"']);
             ocnOut{end+1} = '';
         end

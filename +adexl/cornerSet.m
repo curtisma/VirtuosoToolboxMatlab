@@ -6,10 +6,12 @@ classdef cornerSet
         Name
         Corners adexl.corner
         Temp
+        ProcessCorner
         Variables adexl.variables
 %         Parameters
 %         ModelFiles
 %         ModelGroups
+        Process
         Tests
     end
     
@@ -21,11 +23,21 @@ classdef cornerSet
             p = inputParser;
 %             p.KeepUnmatched = true;
             p.addOptional('Name','',@ischar);
-            p.addOptional('Corners','',@(x) isa(x,'adexl.corner'));
+            p.addParameter('Corners',adexl.corner.empty,@(x) isa(x,'adexl.corner'));
 %             p.addParameter('DUT',cdscell.empty,@(x) isa(x,'cdsCell'));
-            p.parse(varargin{:});
+            p.addParameter('ProcessCorner','',@ischar);
+            p.addParameter('Temp',[],@isnumeric);
+            p.addParameter('Variables',adexl.variables.empty,@(x) isa(x,'adexl.variables'));
+            p.addParameter('Process',processes.GENERIC.empty,@(x) isa(x,'cdsProcess'));
+            p.parse(Name,varargin{:});
             obj.Name = p.Results.Name;
             obj.Corners = p.Results.Corners;
+            
+            % Setup parameters
+            obj.Process = p.Results.Process;
+            obj.ProcessCorner = p.Results.ProcessCorner;
+            obj.Temp = p.Results.Temp;
+            obj.Variables = p.Results.Variables;
         end
         function export(obj,file)
         % export Exports the corners to an XML document.  This
@@ -43,13 +55,39 @@ classdef cornerSet
             
         
         end
+        function ocn = ocean(obj,MipiStates)
+            ocn{1} = ['ocnxlCorner( "' obj.Name '"'];
+            ocn{2} = '  ''(';
+            % Variables
+%             ocnVariables = cellfun(@(varName) ['      ("variable" "' varName '" "' num2str(obj.Variables.(varName)) '")'],obj.Variables.names,'UniformOutput',false);
+            ocnVariables = obj.Variables.ocean('corners',MipiStates);
+            ocn = [ocn'; ocnVariables];
+            % Process
+            if(obj.Variables.isVariable('SET_PROCESS'))
+                if(ischar(obj.Variables.SET_PROCESS))
+                    processSections = ['\"' obj.Variables.SET_PROCESS '\" '];
+                elseif(iscell(obj.Variables.SET_PROCESS))
+%                     processSections = ['\"' obj.Variables.SET_PROCESS '\" '];
+                    warning('Need to update cornerSet to handle multiple process corners');
+                else
+                    error('skyVer:cornerSet:SET_PROCESS','SET_PROCESS variable must be a char or cell');
+                end
+                ocn{end+1} = ['      ("model" "' obj.Process.Paths.unixPath('ModelFile') '" ?section "' processSections '"'];
+            else
+                ocn{end+1} = ['      ("model" "' obj.Process.Paths.unixPath('ModelFile') '" ?enabled nil ?section ""'];
+            end
+            % ModelPath is wrong
+            
+            ocn{end+1} = '   )';
+            ocn{end+1} = ')';
+        end
     end
     methods (Static)
-        function obj = loadSTCrow(Name,Temp,ProcessCorner,varargin)
-            for varNum = 1:length(varargin)
-                strsplit = 
-            end
-        end
+%         function obj = loadSTCrow(Name,Temp,ProcessCorner,varargin)
+%             for varNum = 1:length(varargin)
+%                 strsplit = 
+%             end
+%         end
     end
 end
 

@@ -86,6 +86,10 @@ classdef corner < adexl.resultsInterface
 %             end
             obj.signals = p.Results.signals;
             obj.Name = p.Results.Name;
+            % Setup parameters
+            obj.ProcessCorner = p.Results.ProcessCorner;
+            obj.Temp = p.Results.Temp;
+            obj.Variables = p.Results.Variables;
             % Get files
             if(nargin>=1 && ~isempty(varargin{1}))
                 obj.getNetlist;
@@ -98,16 +102,6 @@ classdef corner < adexl.resultsInterface
                     obj.Temp = obj.Variables.temp;
                 end
                 obj.Description = [obj.ProcessCorner '_' num2str(obj.Temp) 'c'];
-            end
-            % Setup parameters
-            if(~isempty(p.Results.ProcessCorner))
-                obj.ProcessCorner = p.Results.ProcessCorner;
-            end
-            if(~isempty(p.Results.Temp))
-                obj.Temp = p.Results.Temp;
-            end
-            if(~isempty(p.Results.Variables))
-                obj.Variables = p.Results.Variables;
             end
         end
         function signalOut = loadSignal(obj,analysis,signal)

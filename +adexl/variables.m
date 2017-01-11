@@ -18,7 +18,8 @@ classdef variables < dynamicprops
     %  add - defines a new variable
     %  import - Imports corners data from an adexl output directory
     %  remove - deletes a variable from the variable set (object)
-    %  
+    %  variableNames - Returns a cell array of the variable names
+    %  variableValues - Returns a cell array of the variable values
     
     properties (Hidden)
         metaVariables meta.DynamicProperty
@@ -41,39 +42,60 @@ classdef variables < dynamicprops
                 obj.add(varargin(1:2:end),varargin(2:2:end));
             end
         end
-        function add(obj,name,value)
+        function add(obj,varargin)
         % add Adds the specified variable(s) to the variable set.
         %  The name input specifies the name(s) of the variable(s) as a
         %  char or cell string.  The value input specifies the value of 
-        %  the variable(s).  The value input can also be 
+        %  the variable(s).  If the value input must also be a cell array
+        %  if the names input is a cell array.  If a adexl.variables object
+        %  is supplied the variables are copied from that object to the
+        %  current object.
         %
         % USAGE
         %  obj.add(name,value)
+        %  obj.add(adexlVariablesObj)
         %
         % See Also: adexl.variables
-            if(isempty(name))
-                error('skyVer:adexl_variables:add',...
-                      'Variable name must be specified');
-            end
-            if(iscell(name))
-                if(length(name) == 1)
-                    obj.add(char(name),value)
+            if(nargin == 2)
+                if(~isa(varargin{1},'adexl.variables'))
+                    error('skyVer:adexl_variables:BadSingleInput',...
+                          'A single input must be another adexl.variables object');
+                end
+                obj.add(properties(varargin{1}),varargin{1}.values);
+            elseif(nargin == 3)
+                name = varargin{1};
+                value = varargin{2};
+                if(isempty(name))
+                    error('skyVer:adexl_variables:add',...
+                          'Variable name must be specified');
+                end
+                if(iscell(name))
+                    if(length(name) == 1)
+                        obj.add(char(name),value)
+                    else
+                        cellfun(@(x,y) obj.add(x,y),name,value);
+                    end
+                elseif(ischar(name))
+                    varName = matlab.lang.makeValidName(name,...
+                               'ReplacementStyle','underscore',...
+                               'Prefix','var_');
+                    if(~strcmp(name,varName))
+                        warning('skyVer:adexl_variables:add',...
+                        ['Variable name "' name '" is not a valid matlab identifier and will be replaced with "' varName '"']);
+                    end
+                    obj.metaVariables(end+1) = obj.addprop(name);
+                    if(iscell(value))
+                        obj.(name) = value{1};
+                    else
+                        obj.(name) = value;
+                    end
                 else
-                    cellfun(@(x,y) obj.add(x,y),name,value);
+                    error('skyVer:adexl_variables:add',...
+                          'Variable name must be a char or cell string');
                 end
-            elseif(ischar(name))
-                varName = matlab.lang.makeValidName(name,...
-                           'ReplacementStyle','underscore',...
-                           'Prefix','var_');
-                if(~strcmp(name,varName))
-                    warning('skyVer:adexl_variables:add',...
-                    ['Variable name "' name '" is not a valid matlab identifier and will be replaced with "' varName '"']);
-                end
-                obj.metaVariables(end+1) = obj.addprop(name);
-                obj.(name) = value;
             else
-                error('skyVer:adexl_variables:add',...
-                      'Variable name must be a char or cell string');
+                error('skyVer:adexl_variables:numInputs',...
+                          'Wrong number of inputs');
             end
         end
         function remove(obj,name)
@@ -120,10 +142,23 @@ classdef variables < dynamicprops
         % See Also: adexl.variables
             out = length(properties(obj));
         end
-        function out = variableNames(obj)
+        function out = names(obj)
         %variableNames Returns a cell array containing the names of the
         % variables that make up the variable set (variables object)
+        % See Also: adexl.variables
         out = properties(obj);
+        end
+        function out = isVariable(obj,variableName)
+        %isVariable Returns true if the variable name is a variable in the
+        % object, false otherwise
+            out = any(strcmp(obj.names,variableName));
+        end
+        function out = values(obj)
+        %variableValues Returns a cell array containing the values of the
+        % variables that make up the variable set (variables object) in a
+        % cell array
+        % See Also: adexl.variables
+            out = cellfun(@(x) obj.(x),properties(obj),'UniformOutput',false);
         end
         function docNode = export(obj)
         % export Exports the variables to an XML document.  This
@@ -161,6 +196,39 @@ classdef variables < dynamicprops
                     end
                     varElement.appendChild(valueElement);
                 docRootNode.appendChild(varElement);
+            end
+        end
+        function ocn = ocean(obj,type,varargin)
+        %ocean The ocean XL commands for generating the variables set
+        %
+        % USAGE
+        %  varsObj.ocean('global')
+        %   Returns the ocean xl commands for a global variable
+        %  varsObj.ocean('test')
+        %   Returns the ocean xl commands for a test variable
+        %  varsObj.ocean('corner', MipiStates) or varsObj.ocean('corners')
+        %   Returns the ocean xl commands for a corners set variable.  The
+        %   MipiStates (skyMipiStates) object for the view must also be provided.
+        % OUTPUTS
+        %  ocnCell - Column cell array containing one line of the set of commands
+        %   in each index
+        % See Also: adexl.variables
+            switch type 
+                case 'global'
+                    vars = setdiff(obj.names,{'SET_DATA_WORD','SET_PROCESS'}); % Need to rework to handle SET_DATA_WORD
+                    ocn = cellfun(@(x) ['ocnxlSweepVar(   "' x '" ' num2str(obj.(x)) ' )'],vars,'UniformOutput',false);
+                case 'test'
+                    vars = setdiff(obj.names,'SET_DATA_WORD'); % Need to rework
+                    ocn = cellfun(@(x) ['desVar(   "' x '" ' num2str(obj.(x)) ' )'],vars,'UniformOutput',false);
+                case {'corner','corners'}
+                    vars = setdiff(obj.names,{'SET_PROCESS'}); % Need to rework to handle SET_DATA_WORD
+                    if(obj.isVariable('SET_DATA_WORD'))
+                        obj.SET_DATA_WORD = strsplit(obj.SET_DATA_WORD(2:end),',$');
+                        obj.SET_DATA_WORD = cellfun(@(word) varargin{1}.State(word), obj.SET_DATA_WORD,'UniformOutput',false);
+                        obj.SET_DATA_WORD = vect2colon([obj.SET_DATA_WORD{:}],'Delimiter','off');
+%                         obj.SET_DATA_WORD = strjoin(obj.SET_DATA_WORD,',');
+                    end
+                    ocn = cellfun(@(x) ['("variable" "' x '" ' num2str(obj.(x)) ' )'],vars,'UniformOutput',false);
             end
         end
     end
