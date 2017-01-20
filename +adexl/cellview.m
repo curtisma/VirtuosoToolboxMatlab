@@ -15,13 +15,16 @@ classdef cellview < matlab.mixin.SetGet & matlab.mixin.Copyable
         Tests adexl.test % ADE L Tests
         Variables adexl.variables % Global "Sweep" Variables
         MipiStates skyMipiStates
+        
 %         CornerSets
 %         outputs
 %         tests
 %         corners
 %         globalVars
     end
-    
+    properties (Hidden)
+        StateDirInt
+    end
     methods
         function obj = cellview(cell,varargin)
         %cellview Create a new adexl.cellview object
@@ -70,7 +73,7 @@ classdef cellview < matlab.mixin.SetGet & matlab.mixin.Copyable
             ocn{6} = ';====================== Set to XL Mode =========================================';
             ocn{7} = 'ocnSetXLMode()';
             ocn{8} = ['ocnxlProjectDir( "/prj/' obj.Cell.Library.Name '/work_libs/' obj.Cell.Library.Username '/cds/simulation")'];
-            ocn{9} = ['ocnxlTargetCellview( "' obj.Cell.Library.UserLibraryName '" "adexl")'];
+            ocn{9} = ['ocnxlTargetCellView( "' obj.Cell.Library.UserLibraryName '" "' obj.Cell.Name '" "adexl")'];
             ocn{10} = 'ocnxlResultsLocation( "" )';
             ocn{11} = 'ocnxlSimResultsLocation( "" )';
             ocn{12} = '';
@@ -78,19 +81,48 @@ classdef cellview < matlab.mixin.SetGet & matlab.mixin.Copyable
             ocn{14} = '';
             ocn = ocn';
             % Tests
-            ocnTests = arrayfun(@(x) x.ocean, obj.Tests,'UniformOutput',false);
+            ocnTests = arrayfun(@(x) x.ocean(obj.MipiStates), obj.Tests,'UniformOutput',false);
             ocnTests = reshape([ocnTests{:}],[],1);
             ocn = [ocn; ocnTests];
+            ocn{end+1} = '';
             % Global Variables
-
+            ocn{end+1} = ';====================== Sweeps setup ===========================================';
+            ocn = [ocn; obj.Variables.ocean('global')];
+            ocn{end+1} = '';
+            ocn{end+1} = ';====================== Checks and Asserts setup ============================================';
+            ocn{end+1} = 'ocnxlPutChecksAsserts(?netlist nil)';
+            ocn{end+1} = '';
+            ocn{end+1} = ';====================== Test v/s corners setup =================================';
+            ocn{end+1} = '';
+            ocn{end+1} = ';====================== Job setup ==============================================';
+            ocn{end+1} = 'ocnxlJobSetup( ''(';
+            ocn{end+1} = '    "blockemail" "1"';
+            ocn{end+1} = '    "configuretimeout" "-1"';
+            ocn{end+1} = '    "distributionmethod" "LBS"';
+            ocn{end+1} = '    "lingertimeout" "60"';
+            ocn{end+1} = '    "maxjobs" "12"';
+            ocn{end+1} = '    "name" "SWKS Default"';
+            ocn{end+1} = '    "preemptivestart" "0"';
+            ocn{end+1} = '    "reconfigureimmediately" "1"';
+            ocn{end+1} = '    "runtimeout" "-1"';
+            ocn{end+1} = '    "showerrorwhenretrying" "1"';
+            ocn{end+1} = '    "showoutputlogerror" "0"';
+            ocn{end+1} = '    "startmaxjobsimmed" "1"';
+            ocn{end+1} = '    "starttimeout" "-1"';
+            ocn{end+1} = '    "usesameprocess" "0"';
+            ocn{end+1} = ') )';
+            ocn{end+1} = '';
             % Corners
             ocnCorners = arrayfun(@(x) x.CornerSet.ocean(obj.MipiStates), obj.Tests,'UniformOutput',false);
             ocnCorners = reshape([ocnCorners{:}],[],1);
             ocn = [ocn; ocnCorners];
             % Disabled Items
+            ocn{end+1} = ';====================== Disabled items =========================================';
+            ocn = [ocn; obj.Variables.ocean('globalDisableAll')];
+            ocn{end+1} = '';
             ocn{end+1} = ';====================== Run Mode Options ======================================';
-            ocn{end+1} = ['ocnxlSaveSetupAs( "' obj.Cell.Library.UserLibraryName '" "adexl")'];
-            ocn{end+1} = ['ocnxlSaveSetupAs( "' obj.Cell.Library.UserLibraryName '" "adexl")'];
+            ocn{end+1} = ['ocnxlSaveSetupAs( "' obj.Cell.Library.UserLibraryName '" "' obj.Cell.Name '" "adexl")'];
+            ocn{end+1} = '';
             ocn{end+1} = ';====================== Starting Point Info ======================================';
             ocn{end+1} = '';
             ocn{end+1} = ';====================== Run command ============================================';
@@ -100,6 +132,45 @@ classdef cellview < matlab.mixin.SetGet & matlab.mixin.Copyable
             if(nargin == 2)
                 fid = fopen(varargin{1},'w');
                 cellfun(@(ocnChar) fprintf(fid,'%s\n',ocnChar), ocn);
+            end
+        end
+        function skl = skill(obj,varargin)
+            skl{1} = '/* ADEXL Cellview Generation Ocean Script';
+            skl{2} = ['Library: ' obj.Cell.Library.Name];
+            skl{3} = ['Cell: ' obj.Cell.Name];
+            skl{4} = '*/';
+            skl{5} = ';====================== Open Setup ============================================';
+            skl{6} = ['ddGetObj("' obj.Cell.Library.UserLibraryName '" "' obj.Cell.Name '" "adexl" "data.sdb" nil "w")']; % Create cellview
+            skl{7} = 'sessionName = strcat("mysession" (sprintf nil "%d" random()))';
+            skl{8} = 'axlSession = axlCreateSession(sessionName)';
+%             sdb = axlNewSetupDBLCV("myLib" "myCell" "myView")
+            skl{9} = ['sdb = axlSetMainSetupDBLCV( axlSession "' obj.Cell.Library.UserLibraryName '" "' obj.Cell.Name '" "adexl")'];
+            skl{10} = '';
+            
+            % Setup Tests
+            % Tests
+            sklTests = arrayfun(@(x) x.skill(obj.MipiStates), obj.Tests,'UniformOutput',false);
+            sklTests = reshape([sklTests{:}],[],1);
+            skl = [skl'; sklTests];
+            skl{end+1} = '';
+            
+            skl{end+1} = ';====================== Disables ============================================';
+            skl{end+1} = 'axlSetAllVarsDisabled(sdb 1)'; % Disable All Global Variables
+            skl{end+1} = 'axlSetNominalCornerEnabled(sdb 0)'; % Disable All Nominal Corners
+            for outerTest = 1:length(obj.Tests)
+                for innerTest = 1:length(obj.Tests)
+                    
+                end
+            end
+            skl{end+1} = '';
+            
+            skl{end+1} = ';====================== Save Setup ============================================';
+            skl{end+1} = 'axlSaveSetup(axlSession)';
+            skl{end+1} = 'axlCommitSetupDB( sdb )';
+            skl{end+1} = 'axlCloseSetupDB( sdb )';
+            if(nargin == 2)
+                fid = fopen(varargin{1},'w');
+                cellfun(@(sklChar) fprintf(fid,'%s\n',sklChar), skl);
             end
         end
     end

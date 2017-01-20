@@ -12,9 +12,12 @@ classdef test < adexl.resultsInterface
     %  Desktop - Opens a new desktop if one isn't open yet (logical)
     % Parameters  & Properties
     %  Design - The design to be simulated [skyCell or cdsCell]
+    %  Outputs - The simulation result outputs [adexl.output]
     % See also: adexl.corner, adexl.test, adexl.result, adexl.cellview
     
-     %  signals - defines the signals to save
+    
+    
+    %  signals - defines the signals to save
     %  transientSignals - defines the signals to save only for a
     %   transient analysis
     %  dcSignals - defines the signals to save only for a
@@ -22,13 +25,17 @@ classdef test < adexl.resultsInterface
     properties
         Design
         Analyses
-        CornerSet
+        CornerSet adexl.cornerSet
         Corners % An array of cdsOutCorners arranged by simNum
-        Result
+        Variables adexl.variables
+        Outputs adexl.output
+        Temp % Nominal Termperature
         Names
         Paths
         Process
-        Variables
+        Result
+        AdexlView
+        Enable
     end
     properties (Constant)
         Simulator = 'spectre';
@@ -40,7 +47,6 @@ classdef test < adexl.resultsInterface
         Done
         AnalysisNames
     end
-        
     methods
         function obj = test(varargin)
         %test create a new ADEXL test object
@@ -70,9 +76,12 @@ classdef test < adexl.resultsInterface
 %             p.addOptional('Result',cdsOutRun.empty,@(x) isa(x,'cdsOutRun'));
             p.addParameter('Analyses',analyses.DC.empty,@(x) isa(x,'analyses.analysisInterface'));
             p.addParameter('Corners',adexl.corner.empty,@(x) isa(x,'adexl.corner'));
-            p.addParameter('CornerSet',adexl.corner.empty,@(x) isa(x,'adexl.cornerSet'));
+            p.addParameter('CornerSet',adexl.cornerSet.empty,@(x) isa(x,'adexl.cornerSet'));
             p.addParameter('Design',cdsCell.empty,@(x) isa(x,'cdsCellAbstract'));
             p.addParameter('Variables',adexl.variables.empty,@(x) isa(x,'adexl.variables'));
+            p.addParameter('Temp',[],@isnumeric);
+            p.addParameter('Outputs',adexl.output.empty,@(x) isa(x,'adexl.output'));
+            p.addParameter('AdexlView',adexl.cellview.empty,@(x) isa(x,'adexl.cellview'));
             p.parse(varargin{:});
             obj.CornerDoneCnt = 0;
             
@@ -82,6 +91,7 @@ classdef test < adexl.resultsInterface
             obj.Analyses = p.Results.Analyses;
             obj.Design = p.Results.Design;
             obj.Variables = p.Results.Variables;
+            obj.Temp = p.Results.Temp;
             if(~isempty(p.Results.corner))
                 if(nargin >1)
                     obj.addCorner(p.Results.corner,varargin{2:end});
@@ -237,24 +247,54 @@ classdef test < adexl.resultsInterface
             end
             obj.Process = val;
         end
-        function ocnOut = ocean(obj)
+        function ocnOut = ocean(obj,MipiStates)
         %ocean Creates a set of ocean commands to create the test
         %   Returns a cell array of ocean commands for creating the test in
         %   a Cadence Adexl view
         %   Currently assumes the cellview to be simulated is a config view
         %
             ocnOut{1} = [';---------- Test "' obj.Name '" -------------'];
-            ocnOut{2} = ['ocnxlBeginTest( "' obj.Design.Name '")'];
-            ocnOut{3} = ['simulator(' '' obj.Simulator ')'];
+            ocnOut{2} = ['ocnxlBeginTest("' obj.Name '")'];
+            ocnOut{3} = sprintf('simulator( ''%s )',obj.Simulator);
             ocnOut{4} = ['design("' obj.Design.Library.UserLibraryName '" "' obj.Design.Name '" "config")'];
             ocnOut = [ocnOut'; obj.Design.Library.Process.OceanModelPath]; % Model Path
             ocnOut = [ocnOut; obj.Design.Library.Process.OceanNomModelFile]; % Nominal Model File Information
             ocnOut = [ocnOut; obj.Analyses.ocean]; % Analysis commands
-            ocnOut = [ocnOut; obj.Variables.ocean('test')]; % Design Variables
-            ocnOut{end+1} = sprintf('envOption(\n\t''emirSumList nil\n\t''analysisOrder list("dc" "pz" "dcmatch" "stb" "tran" "envlp" "ac" "lf" "noise" "xf" "sp" "pss" "pac" "pstb" "pnoise" "pxf" "psp" "qpss" "qpac" "qpnoise" "qpxf" "qpsp" "hb" "hbac" "hbnoise" "sens" "acmatch")');
+            ocnOut = [ocnOut; obj.Variables.ocean('test',MipiStates)]; % Design Variables
+            ocnOut{end+1} = sprintf('envOption(\n\t''emirSumList nil\n\t''analysisOrder list("dc" "pz" "dcmatch" "stb" "tran" "envlp" "ac" "lf" "noise" "xf" "sp" "pss" "pac" "pstb" "pnoise" "pxf" "psp" "qpss" "qpac" "qpnoise" "qpxf" "qpsp" "hb" "hbac" "hbnoise" "sens" "acmatch")\n)');
             ocnOut{end+1} = sprintf('option( ?categ ''turboOpts\n\t''preserveOption  "None"\n)');
+            ocnOut{end+1} = sprintf('temp( %f )',obj.Temp);
+            ocnOut = [ocnOut; obj.Outputs.ocean];
             ocnOut{end+1} = sprintf(['ocnxlEndTest() ; "' obj.Name '"']);
             ocnOut{end+1} = '';
+        end
+        function skl = skill(obj,MipiStates)
+            % Setup ADE test state
+            skl{1} = [';---------- Test "' obj.Name '" -------------'];
+            skl{2} = ['htest = axlPutTest( sdb "' obj.Name '" "ADE")'];
+            skl{3} = ['axlSetTestToolArgs( htest list( list("lib" "' obj.Design.Library.UserLibraryName '") '...
+                                                      'list("cell" "' obj.Design.Name '") '...
+                                                      'list("view" "config") '...
+                                                      'list("sim" "' obj.Simulator '"))) '];
+            skl{4} = ['testSession = axlGetToolSession(axlSession "' obj.Name '")'];
+            skl{5} = 'testSession = asiGetSession(testSession)';
+            %skl = [skl'; obj.Design.Library.Process.skillNomModelFile']; % Model Path and file information
+            skl = [skl'; obj.Analyses.skill'];                             % Analysis Setup
+            skl = [skl; obj.Variables.skill('test',MipiStates)];          % Design Variables
+            skl = [skl; obj.Outputs.skill(obj.Name)];
+            skl = [skl; obj.CornerSet.skill(MipiStates)];
+            % Disable tests that do not belong to this corner
+%             skl{end+1:end+length(obj.AdexlView.Tests)-1} = ''; % Preallocate
+            for testEnNum = 1:length(obj.AdexlView.Tests)
+                if(~strcmp(obj.AdexlView.Tests(testEnNum).Name,obj.Name))
+                    skl{end+1} = ['axlSetCornerTestEnabled(cornerH "' obj.AdexlView.Tests(testEnNum).Name '" nil)'];
+                end
+            end
+            % Enable or disable corner
+            skl{end+1} = ['axlSetEnabled(htest ' cdsSkill.sklLogical(obj.Enable) ')'];
+%             skl{2} = ['axlPutNote( sdb "test"
+            
+            
         end
     end
     

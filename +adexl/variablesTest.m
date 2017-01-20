@@ -40,6 +40,11 @@ classdef variablesTest < matlab.unittest.TestCase
             XMLdoc = var.export;
             testCase.verifyClass(var.export,'org.apache.xerces.dom.DocumentImpl')
         end
+        function testCopy(testCase)
+            var = adexl.variables('VDD',3:0.5:5.0, 'VIO',[1.65 1.8 1.95]);
+            varCopy = var.copy;
+            testCase.verifyEqual(varCopy.variableNames,{'VDD';'VIO'});
+        end
 %         function testImport(testCase)
 %             var = adexl.variables;
 %             var.import(psfdir);

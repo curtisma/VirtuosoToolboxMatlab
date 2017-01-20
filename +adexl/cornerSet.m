@@ -56,8 +56,8 @@ classdef cornerSet
         
         end
         function ocn = ocean(obj,MipiStates)
+            skl{1} = [';---------- Corner "' obj.Name '" -------------'];
             ocn{1} = ['ocnxlCorner( "' obj.Name '"'];
-            ocn{2} = '  ''(';
             % Variables
 %             ocnVariables = cellfun(@(varName) ['      ("variable" "' varName '" "' num2str(obj.Variables.(varName)) '")'],obj.Variables.names,'UniformOutput',false);
             ocnVariables = obj.Variables.ocean('corners',MipiStates);
@@ -72,14 +72,38 @@ classdef cornerSet
                 else
                     error('skyVer:cornerSet:SET_PROCESS','SET_PROCESS variable must be a char or cell');
                 end
-                ocn{end+1} = ['      ("model" "' obj.Process.Paths.unixPath('ModelFile') '" ?section "' processSections '"'];
+                ocn{end+1} = ['      ("model" "' obj.Process.Paths.unixPath('ModelFile') '" ?section "' processSections '")'];
             else
-                ocn{end+1} = ['      ("model" "' obj.Process.Paths.unixPath('ModelFile') '" ?enabled nil ?section ""'];
+                ocn{end+1} = ['      ("model" "' obj.Process.Paths.unixPath('ModelFile') '" ?enabled nil ?section "")'];
             end
             % ModelPath is wrong
             
             ocn{end+1} = '   )';
             ocn{end+1} = ')';
+        end
+        function skl = skill(obj,MipiStates)
+            
+            skl{1} = ['cornerH = axlPutCorner(sdb "' obj.Name '")'];
+            % Variables
+            skl = [skl'; obj.Variables.skill('corners',MipiStates)];
+            % Process
+            if(obj.Variables.isVariable('SET_PROCESS'))
+                if(ischar(obj.Variables.SET_PROCESS))
+                    processSections = obj.Variables.SET_PROCESS;
+                elseif(iscell(obj.Variables.SET_PROCESS))
+                    warning('Need to update cornerSet to handle multiple process corners');
+                else
+                    error('skyVer:cornerSet:SET_PROCESS','SET_PROCESS variable must be a char or cell');
+                end
+                skl{end+1} = 'modelHandle=axlPutModel(cornerH "header_MIPI.scs")';
+                skl{end+1} = ['axlSetModelFile(modelHandle "' obj.Process.Paths.unixPath('ModelFile') '")'];
+                skl{end+1} = ['axlSetModelSection(modelHandle "' processSections '")'];
+            else
+                % Nominal Corner
+%                 skl{end+1} = 'modelHandle=axlPutModel(cornerH "header_MIPI.scs")';
+%                 skl{end+1} = ['axlSetModelFile(modelHandle "' obj.Process.Paths.unixPath('ModelFile') '")'];
+%                 skl{end+1} = 'axlSetModelSection(modelHandle "")';
+            end
         end
     end
     methods (Static)

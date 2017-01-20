@@ -1,4 +1,4 @@
-classdef axlOutputs < hgsetget
+classdef outputs < hgsetget
     %axlOutputs A class for generating a set of ADEXL outputs 
     %   The output list can be written to a csv file and then imported into
     %   ADEXL.
@@ -9,11 +9,12 @@ classdef axlOutputs < hgsetget
     % See also: cdsADEXLoutputs.cdsADEXLoutputs cdsADEXLoutputs.add
     
     properties
+        Name
         outputs
     end
     
     methods
-        function obj = axlOutputs(varargin)
+        function obj = outputs(varargin)
         % cdsADEXLoutputs Creates a new ADEXL output object and returns a
         % handle to it
         %

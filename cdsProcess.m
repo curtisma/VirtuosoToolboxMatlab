@@ -32,6 +32,9 @@ classdef cdsProcess < matlab.mixin.SetGet
             ocn = [ocn; ocnSections'];
             ocn{end+1} = ')';
         end
+        function skl = skillNomModelFile(obj)
+            skl = cellfun(@(x) ['asiAddModelLibSelection(testSession "' obj.Paths.unixPath('ModelPath') '/' x '" "' obj.NomModelFileSections(x) '")'],obj.NomModelFileSections.keys,'UniformOutput',false);
+        end
     end
     
 end

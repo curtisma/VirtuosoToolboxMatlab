@@ -1,4 +1,4 @@
-classdef variables < dynamicprops
+classdef variables < dynamicprops & matlab.mixin.Copyable
     %variables A set of ADEXL Variables
     %   Defines a set of variables for a corner, a test, or an adexl
     %   cellview. (global variables)  Each variable is defined as a
@@ -83,12 +83,14 @@ classdef variables < dynamicprops
                         warning('skyVer:adexl_variables:add',...
                         ['Variable name "' name '" is not a valid matlab identifier and will be replaced with "' varName '"']);
                     end
-                    obj.metaVariables(end+1) = obj.addprop(name);
-                    if(iscell(value))
-                        obj.(name) = value{1};
-                    else
-                        obj.(name) = value;
+                    
+                    if(~any(strcmp(varName,properties(obj))))
+                        obj.metaVariables(end+1) = obj.addprop(name);
                     end
+                    if(iscell(value))
+                        value = value{1};
+                    end
+                    obj.(name) = value;
                 else
                     error('skyVer:adexl_variables:add',...
                           'Variable name must be a char or cell string');
@@ -204,7 +206,7 @@ classdef variables < dynamicprops
         % USAGE
         %  varsObj.ocean('global')
         %   Returns the ocean xl commands for a global variable
-        %  varsObj.ocean('test')
+        %  varsObj.ocean('test', MipiStates)
         %   Returns the ocean xl commands for a test variable
         %  varsObj.ocean('corner', MipiStates) or varsObj.ocean('corners')
         %   Returns the ocean xl commands for a corners set variable.  The
@@ -215,21 +217,51 @@ classdef variables < dynamicprops
         % See Also: adexl.variables
             switch type 
                 case 'global'
-                    vars = setdiff(obj.names,{'SET_DATA_WORD','SET_PROCESS'}); % Need to rework to handle SET_DATA_WORD
+                    vars = setdiff(obj.names,'SET_SIM_PROCESS'); % Need to rework to handle SET_DATA_WORD
                     ocn = cellfun(@(x) ['ocnxlSweepVar(   "' x '" ' num2str(obj.(x)) ' )'],vars,'UniformOutput',false);
+                case 'globalDisableAll'
+                    vars = setdiff(obj.names,'SET_SIM_PROCESS'); % Need to rework to handle SET_DATA_WORD
+                    ocn = cellfun(@(x) ['ocnxlDisableSweepVar(   "' x '")'],vars,'UniformOutput',false);
                 case 'test'
-                    vars = setdiff(obj.names,'SET_DATA_WORD'); % Need to rework
-                    ocn = cellfun(@(x) ['desVar(   "' x '" ' num2str(obj.(x)) ' )'],vars,'UniformOutput',false);
-                case {'corner','corners'}
-                    vars = setdiff(obj.names,{'SET_PROCESS'}); % Need to rework to handle SET_DATA_WORD
+                    vars = setdiff(obj.names,'SET_SIM_PROCESS'); % Need to rework
                     if(obj.isVariable('SET_DATA_WORD'))
                         obj.SET_DATA_WORD = strsplit(obj.SET_DATA_WORD(2:end),',$');
                         obj.SET_DATA_WORD = cellfun(@(word) varargin{1}.State(word), obj.SET_DATA_WORD,'UniformOutput',false);
-                        obj.SET_DATA_WORD = vect2colon([obj.SET_DATA_WORD{:}],'Delimiter','off');
-%                         obj.SET_DATA_WORD = strjoin(obj.SET_DATA_WORD,',');
+                        obj.SET_DATA_WORD = strrep(strtrim(vect2colon([obj.SET_DATA_WORD{:}],'Delimiter','off')),' ',',');
                     end
-                    ocn = cellfun(@(x) ['("variable" "' x '" ' num2str(obj.(x)) ' )'],vars,'UniformOutput',false);
+                    ocn = cellfun(@(x) ['desVar(   "' x '" ' num2str(obj.(x)) ' )'],vars,'UniformOutput',false);
+                case {'corner','corners'}
+                    vars = setdiff(obj.names,{'SET_SIM_PROCESS'}); % Need to rework to handle SET_DATA_WORD
+                    if(obj.isVariable('SET_DATA_WORD'))
+                        obj.SET_DATA_WORD = strsplit(obj.SET_DATA_WORD(2:end),',$');
+                        obj.SET_DATA_WORD = cellfun(@(word) varargin{1}.State(word), obj.SET_DATA_WORD,'UniformOutput',false);
+                        obj.SET_DATA_WORD = strrep(strtrim(vect2colon([obj.SET_DATA_WORD{:}],'Delimiter','off')),' ',',');
+                    end
+                    ocn = cellfun(@(x) ['      ("variable" "' x '" "' num2str(obj.(x)) '")'],vars,'UniformOutput',false);
             end
+        end
+        function skl = skill(obj,type,varargin)
+            switch type
+                case 'test'
+                    skl{1} = sprintf('asiAddDesignVarList(testSession ''(%s))',strtrim(strjoin(cellfun(@(x,y) ['("' x '" "' num2str(y) '") '],obj.names,obj.values,'UniformOutput',false))));
+                case {'corner' 'corners'}
+                    vars = setdiff(obj.names,{'SET_SIM_PROCESS'}); % Need to rework to handle SET_DATA_WORD
+                    if(obj.isVariable('SET_DATA_WORD'))
+                        obj.SET_DATA_WORD = strsplit(obj.SET_DATA_WORD(2:end),',$');
+                        if(~isempty(setdiff(obj.SET_DATA_WORD,varargin{1}.State.keys)))
+                            error('skyVer:adexl_variables:SET_DATA_WORD','Mipi states file does not contain all the states included in the STC file');
+                        end
+                        obj.SET_DATA_WORD = cellfun(@(word) varargin{1}.State(word), obj.SET_DATA_WORD,'UniformOutput',false);
+                        obj.SET_DATA_WORD = strrep(strtrim(vect2colon([obj.SET_DATA_WORD{:}],'Delimiter','off')),' ',',');
+                    end
+                    skl = cellfun(@(x) ['axlPutVar(cornerH "' x '" "' num2str(obj.(x)) '")'],vars,'UniformOutput',false);
+            end
+        end
+    end
+    methods (Access = protected)
+        function cpObj = copyElement(obj)
+            cpObj = copyElement@matlab.mixin.Copyable(obj);
+            cpObj.add(obj.names,obj.values);
         end
     end
     
