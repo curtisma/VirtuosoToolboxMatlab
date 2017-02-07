@@ -34,7 +34,7 @@ classdef result < adexl.resultsInterface
         % cdsOutRun A single simulation run
         %   See class description for usage information.
         %
-        % See also: cdsOutRun
+        % See also: adexl.result
         
             obj = obj@adexl.resultsInterface(varargin{:}); % Superclass constructor
             p = inputParser;
@@ -47,11 +47,11 @@ classdef result < adexl.resultsInterface
             p.parse(varargin{:});
             
             % Load a full result if a results dir is provided
-            if(ischar(p.Results.data) && cdsOutRun.isResultFolder(p.Results.data))
+            if(ischar(p.Results.data) && adexl.result.isResultFolder(p.Results.data))
                 obj.Tests = cdsOutTest.empty;
             	obj.loadData(varargin{:})
             % Normal corner path
-            elseif(ischar(p.Results.data) || isa(p.Results.data,'cdsOutCorner'))
+            elseif(ischar(p.Results.data) || isa(p.Results.data,'adexl.corner'))
                 obj.startLog(p.Results.data);
                 if(nargin>1)
                     corner = obj.addCorner(p.Results.data,varargin{2:end});
@@ -59,11 +59,11 @@ classdef result < adexl.resultsInterface
                     corner = obj.addCorner(p.Results.data);
                 end
                 corner.result = obj;
-            elseif(isa(p.Results.data,'cdsOutTest'))
+            elseif(isa(p.Results.data,'adexl.test'))
 %                 obj.Paths.test = 
                 obj.Tests(end+1) = p.Results.data;
             else
-                obj.Tests = cdsOutTest.empty;
+                obj.Tests = adexl.test.empty;
             end
             obj.cornerDoneCnt = 0;
             if(exist('corner','var') && isempty(corner.Process))
@@ -81,7 +81,7 @@ classdef result < adexl.resultsInterface
             elseif(~isempty(obj.Tests) && ~isempty(corner))
                 if(~strcmp(obj.Name, corner.Names.result))
                 % Check that this corner is for this run
-                    error('VirtuosoToolbox:cdsOutTest:setCorners','Wrong test name');
+                    error('VirtuosoToolbox:adexl_test:setCorners','Wrong test name');
                 end
             end
             % Find the corner's test or start a new one
@@ -89,14 +89,14 @@ classdef result < adexl.resultsInterface
                 selTest = strcmp({obj.Tests.Name},corner.Names.test);
             else
                 selTest = [];
-                obj.Tests = cdsOutTest.empty;
+                obj.Tests = adexl.test.empty;
             end
             if(isempty(selTest)||~any(selTest))
-                obj.Tests(end+1) = cdsOutTest(corner,varargin{:});
+                obj.Tests(end+1) = adexl.test(corner,varargin{:});
             elseif(sum(selTest)==1)
                 obj.Tests(selTest).addCorner(corner,varargin{:});
             else
-                error('VirtuosoToolbox:cdsOutTest:setCorners','Multiple test matches found');
+                error('VirtuosoToolbox:adexl_test:setCorners','Multiple test matches found');
             end
             obj.Process = corner.Process;
         end
@@ -172,7 +172,7 @@ classdef result < adexl.resultsInterface
                 val = processes.(val);
             end
             if(~isa(val,'cdsProcess'))
-                error('VirtuosoToolbox:cdsOutRun:setProcess','Process must be subclassed from cdsProcess')
+                error('VirtuosoToolbox:adexl_result:setProcess','Process must be subclassed from cdsProcess')
             end
             obj.Process = val;
         end
@@ -193,7 +193,7 @@ classdef result < adexl.resultsInterface
                                 end
                             else
                                 warning('Result not found')
-                                varargout = {cdsOutRun.empty};
+                                varargout = {adexl.result.empty};
                             end
                         else
                             varargout = {obj.results.subsref(obj.results,s(2:end))};

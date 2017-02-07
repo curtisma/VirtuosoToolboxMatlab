@@ -13,6 +13,13 @@ classdef test < adexl.resultsInterface
     % Parameters  & Properties
     %  Design - The design to be simulated [skyCell or cdsCell]
     %  Outputs - The simulation result outputs [adexl.output]
+    %  SaveAllVoltages - If true, all voltages in the design are saved.  
+    %                    If fasle, only select voltages are saved
+    %   Selected currents are saved by default.
+    %  CornerSet
+    % PROPERTIES
+    %  Analyses - 
+    %  
     % See also: adexl.corner, adexl.test, adexl.result, adexl.cellview
     
     
@@ -29,11 +36,12 @@ classdef test < adexl.resultsInterface
         Corners % An array of cdsOutCorners arranged by simNum
         Variables adexl.variables
         Outputs adexl.output
-        Temp % Nominal Termperature
+        Temp % Nominal Temperature
         Names
         Paths
         Process
         Result
+        SaveAllVoltages
         AdexlView
         Enable
     end
@@ -82,6 +90,7 @@ classdef test < adexl.resultsInterface
             p.addParameter('Temp',[],@isnumeric);
             p.addParameter('Outputs',adexl.output.empty,@(x) isa(x,'adexl.output'));
             p.addParameter('AdexlView',adexl.cellview.empty,@(x) isa(x,'adexl.cellview'));
+            p.addParameter('SaveAllVoltages',false,@islogical);
             p.parse(varargin{:});
             obj.CornerDoneCnt = 0;
             
@@ -92,6 +101,7 @@ classdef test < adexl.resultsInterface
             obj.Design = p.Results.Design;
             obj.Variables = p.Results.Variables;
             obj.Temp = p.Results.Temp;
+            obj.SaveAllVoltages = p.Results.SaveAllVoltages;
             if(~isempty(p.Results.corner))
                 if(nargin >1)
                     obj.addCorner(p.Results.corner,varargin{2:end});
@@ -283,6 +293,13 @@ classdef test < adexl.resultsInterface
             skl = [skl; obj.Variables.skill('test',MipiStates)];          % Design Variables
             skl = [skl; obj.Outputs.skill(obj.Name)];
             skl = [skl; obj.CornerSet.skill(MipiStates)];
+            % Save All... Options
+            if(~obj.SaveAllVoltages)
+                skl{end+1} = sprintf('asiSetKeepOptionVal(testSession ''save "selected")');
+            end
+            skl{end+1} = sprintf('asiSetKeepOptionVal(testSession ''currents "selected")');
+
+            
             % Disable tests that do not belong to this corner
 %             skl{end+1:end+length(obj.AdexlView.Tests)-1} = ''; % Preallocate
             for testEnNum = 1:length(obj.AdexlView.Tests)
@@ -293,8 +310,6 @@ classdef test < adexl.resultsInterface
             % Enable or disable corner
             skl{end+1} = ['axlSetEnabled(htest ' cdsSkill.sklLogical(obj.Enable) ')'];
 %             skl{2} = ['axlPutNote( sdb "test"
-            
-            
         end
     end
     

@@ -110,8 +110,12 @@ classdef variables < dynamicprops & matlab.mixin.Copyable
         %  name - The name of the variable to delete (char)
         %
         % See Also: adexl.variables
-            metaProp = obj.findprop(name);
-            delete(metaProp);
+            if(ischar(name))
+                metaProp = obj.findprop(name);
+                delete(metaProp);
+            else
+                error('skyVer:variables_remove:IncorrectInput','Incorrect Input');
+            end
         end
         function import(obj,source)
         % import Imports corners data from an adexl output directory
@@ -249,7 +253,7 @@ classdef variables < dynamicprops & matlab.mixin.Copyable
                     if(obj.isVariable('SET_DATA_WORD'))
                         obj.SET_DATA_WORD = strsplit(obj.SET_DATA_WORD(2:end),',$');
                         if(~isempty(setdiff(obj.SET_DATA_WORD,varargin{1}.State.keys)))
-                            error('skyVer:adexl_variables:SET_DATA_WORD','Mipi states file does not contain all the states included in the STC file');
+                            error('skyVer:adexl_variables:SET_DATA_WORD','Mipi states file does not contain all the states included in the STC file\n%s',strjoin(setdiff(obj.SET_DATA_WORD,varargin{1}.State.keys),', '));
                         end
                         obj.SET_DATA_WORD = cellfun(@(word) varargin{1}.State(word), obj.SET_DATA_WORD,'UniformOutput',false);
                         obj.SET_DATA_WORD = strrep(strtrim(vect2colon([obj.SET_DATA_WORD{:}],'Delimiter','off')),' ',',');

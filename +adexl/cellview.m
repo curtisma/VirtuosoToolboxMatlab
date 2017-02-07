@@ -134,7 +134,7 @@ classdef cellview < matlab.mixin.SetGet & matlab.mixin.Copyable
                 cellfun(@(ocnChar) fprintf(fid,'%s\n',ocnChar), ocn);
             end
         end
-        function skl = skill(obj,varargin)
+        function varargout = skill(obj,varargin)
             skl{1} = '/* ADEXL Cellview Generation Ocean Script';
             skl{2} = ['Library: ' obj.Cell.Library.Name];
             skl{3} = ['Cell: ' obj.Cell.Name];
@@ -168,9 +168,24 @@ classdef cellview < matlab.mixin.SetGet & matlab.mixin.Copyable
             skl{end+1} = 'axlSaveSetup(axlSession)';
             skl{end+1} = 'axlCommitSetupDB( sdb )';
             skl{end+1} = 'axlCloseSetupDB( sdb )';
-            if(nargin == 2)
-                fid = fopen(varargin{1},'w');
-                cellfun(@(sklChar) fprintf(fid,'%s\n',sklChar), skl);
+%             if(nargin == 1)
+%                 fid = fopen(fullfile(obj.Cell.DUT.Path,[obj.Cell.Name '.il']),'w');
+%                 cellfun(@(sklChar) fprintf(fid,'%s\n',sklChar), skl);
+%                 fclose(fid);
+%             elseif(nargin == 2)
+%                 fid = fopen(varargin{1},'w');
+%                 cellfun(@(sklChar) fprintf(fid,'%s\n',sklChar), skl);
+%                 fclose(fid);
+%             end
+            if(nargin == 1)
+                runOutput = cdsRunSkill(fullfile(obj.Cell.DUT.Path,[obj.Cell.Name '.il']),obj.Cell.Library,skl);
+            elseif(nargin == 2)
+                runOutput = cdsRunSkill(varargin{1},obj.Cell.Library,skl);
+            end
+            if(nargout == 1)
+                varargout = skl;
+            elseif(nargout == 2)
+                varargout = {skl runOutput};
             end
         end
     end

@@ -61,6 +61,8 @@ classdef output < matlab.mixin.SetGet & matlab.mixin.Copyable
                         else
                             ocn = ['ocnxlOutputTerminal( "' obj.Details '" ?plot ' cdsSkill.sklLogical(obj.PlotEn) ' ?save ' cdsSkill.sklLogical(obj.SaveEn) ')'];
                         end
+                    case 'matlab'
+                        ocn = '';
                     otherwise
                         ocn = '';
                 end
