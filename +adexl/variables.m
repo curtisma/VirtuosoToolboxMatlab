@@ -22,7 +22,7 @@ classdef variables < dynamicprops & matlab.mixin.Copyable
     %  variableValues - Returns a cell array of the variable values
     
     properties (Hidden)
-        metaVariables meta.DynamicProperty
+%         metaVariables meta.DynamicProperty
     end
     
     methods
@@ -40,13 +40,15 @@ classdef variables < dynamicprops & matlab.mixin.Copyable
             % Add the specified variables
 %             cellfun(@(x,y) obj.add(x,y),varargin(1:2:end),varargin(2:2:end));
                 obj.add(varargin(1:2:end),varargin(2:2:end));
+%             else
+%                 obj.metaVariables = meta.DynamicProperty.empty;
             end
         end
         function add(obj,varargin)
         % add Adds the specified variable(s) to the variable set.
         %  The name input specifies the name(s) of the variable(s) as a
         %  char or cell string.  The value input specifies the value of 
-        %  the variable(s).  If the value input must also be a cell array
+        %  the variable(s).  The value input must also be a cell array
         %  if the names input is a cell array.  If a adexl.variables object
         %  is supplied the variables are copied from that object to the
         %  current object.
@@ -85,7 +87,8 @@ classdef variables < dynamicprops & matlab.mixin.Copyable
                     end
                     
                     if(~any(strcmp(varName,properties(obj))))
-                        obj.metaVariables(end+1) = obj.addprop(name);
+%                         obj.metaVariables(end+1) = obj.addprop(name);
+                        obj.addprop(name);
                     end
                     if(iscell(value))
                         value = value{1};
@@ -148,23 +151,31 @@ classdef variables < dynamicprops & matlab.mixin.Copyable
         % See Also: adexl.variables
             out = length(properties(obj));
         end
-        function out = names(obj)
+        function out = names(obj,idx)
         %variableNames Returns a cell array containing the names of the
         % variables that make up the variable set (variables object)
+        % Also has an optional idx input that indexes the output
         % See Also: adexl.variables
-        out = properties(obj);
+            out = properties(obj);
+            if(nargin == 2)
+                out = out(idx);
+            end
         end
         function out = isVariable(obj,variableName)
         %isVariable Returns true if the variable name is a variable in the
         % object, false otherwise
             out = any(strcmp(obj.names,variableName));
         end
-        function out = values(obj)
+        function out = values(obj,idx)
         %variableValues Returns a cell array containing the values of the
         % variables that make up the variable set (variables object) in a
         % cell array
+        % Also has an optional idx input that indexes the output
         % See Also: adexl.variables
             out = cellfun(@(x) obj.(x),properties(obj),'UniformOutput',false);
+            if(nargin == 2)
+                out = out(idx);
+            end
         end
         function docNode = export(obj)
         % export Exports the variables to an XML document.  This
@@ -249,16 +260,23 @@ classdef variables < dynamicprops & matlab.mixin.Copyable
                 case 'test'
                     skl{1} = sprintf('asiAddDesignVarList(testSession ''(%s))',strtrim(strjoin(cellfun(@(x,y) ['("' x '" "' num2str(y) '") '],obj.names,obj.values,'UniformOutput',false))));
                 case {'corner' 'corners'}
-                    vars = setdiff(obj.names,{'SET_SIM_PROCESS'}); % Need to rework to handle SET_DATA_WORD
+%                     vars = setdiff(obj.names,{'SET_SIM_PROCESS'});
                     if(obj.isVariable('SET_DATA_WORD'))
-                        obj.SET_DATA_WORD = strsplit(obj.SET_DATA_WORD(2:end),',$');
+                        if(strcmp(obj.SET_DATA_WORD(1),'$'))
+                            obj.SET_DATA_WORD = strsplit(obj.SET_DATA_WORD(2:end),',$');
+                        end
+                        % Need to rework so it doesn't catch it the second
+                        % time around.
                         if(~isempty(setdiff(obj.SET_DATA_WORD,varargin{1}.State.keys)))
                             error('skyVer:adexl_variables:SET_DATA_WORD','Mipi states file does not contain all the states included in the STC file\n%s',strjoin(setdiff(obj.SET_DATA_WORD,varargin{1}.State.keys),', '));
                         end
                         obj.SET_DATA_WORD = cellfun(@(word) varargin{1}.State(word), obj.SET_DATA_WORD,'UniformOutput',false);
                         obj.SET_DATA_WORD = strrep(strtrim(vect2colon([obj.SET_DATA_WORD{:}],'Delimiter','off')),' ',',');
                     end
-                    skl = cellfun(@(x) ['axlPutVar(cornerH "' x '" "' num2str(obj.(x)) '")'],vars,'UniformOutput',false);
+%                     skl = cellfun(@(x) ['axlPutVar(cornerH "' x '" "' num2str(obj.(x)) '")'],vars,'UniformOutput',false);
+                    sklVarList = cellfun(@(x) ['("' x '" "' num2str(obj.(x)) '")'],obj.names(cellfun(@isnumeric,obj.values)),'UniformOutput',false);
+                    skl{1} = sprintf('varList = ''(%s)',strjoin(sklVarList,' '));
+                    skl{2} = 'axlPutVarList(cornerH varList)';
             end
         end
     end

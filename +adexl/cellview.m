@@ -139,29 +139,31 @@ classdef cellview < matlab.mixin.SetGet & matlab.mixin.Copyable
             skl{2} = ['Library: ' obj.Cell.Library.Name];
             skl{3} = ['Cell: ' obj.Cell.Name];
             skl{4} = '*/';
-            skl{5} = ';====================== Open Setup ============================================';
-            skl{6} = ['ddGetObj("' obj.Cell.Library.UserLibraryName '" "' obj.Cell.Name '" "adexl" "data.sdb" nil "w")']; % Create cellview
-            skl{7} = 'sessionName = strcat("mysession" (sprintf nil "%d" random()))';
-            skl{8} = 'axlSession = axlCreateSession(sessionName)';
+            skl{5} = ';====================== Load Skill Functions ============================================';
+            skl{6} = ['load("' skySkill.axlFunctionPath '")'];
+            skl{7} = ';====================== Open Setup ============================================';
+            skl{8} = ['ddGetObj("' obj.Cell.Library.UserLibraryName '" "' obj.Cell.Name '" "adexl" "data.sdb" nil "w")']; % Create cellview
+            skl{9} = 'sessionName = strcat("mysession" (sprintf nil "%d" random()))';
+            skl{10} = 'axlSession = axlCreateSession(sessionName)';
 %             sdb = axlNewSetupDBLCV("myLib" "myCell" "myView")
-            skl{9} = ['sdb = axlSetMainSetupDBLCV( axlSession "' obj.Cell.Library.UserLibraryName '" "' obj.Cell.Name '" "adexl")'];
-            skl{10} = '';
+            skl{11} = ['sdb = axlSetMainSetupDBLCV( axlSession "' obj.Cell.Library.UserLibraryName '" "' obj.Cell.Name '" "adexl")'];
+            skl{12} = '';
             
             % Setup Tests
             % Tests
             sklTests = arrayfun(@(x) x.skill(obj.MipiStates), obj.Tests,'UniformOutput',false);
-            sklTests = reshape([sklTests{:}],[],1);
+            sklTests = reshape(cat(1,sklTests{:}),[],1);
             skl = [skl'; sklTests];
             skl{end+1} = '';
             
             skl{end+1} = ';====================== Disables ============================================';
             skl{end+1} = 'axlSetAllVarsDisabled(sdb 1)'; % Disable All Global Variables
             skl{end+1} = 'axlSetNominalCornerEnabled(sdb 0)'; % Disable All Nominal Corners
-            for outerTest = 1:length(obj.Tests)
-                for innerTest = 1:length(obj.Tests)
-                    
-                end
-            end
+%             for outerTest = 1:length(obj.Tests)
+%                 for innerTest = 1:length(obj.Tests)
+%                     
+%                 end
+%             end
             skl{end+1} = '';
             
             skl{end+1} = ';====================== Save Setup ============================================';
@@ -178,9 +180,9 @@ classdef cellview < matlab.mixin.SetGet & matlab.mixin.Copyable
 %                 fclose(fid);
 %             end
             if(nargin == 1)
-                runOutput = cdsRunSkill(fullfile(obj.Cell.DUT.Path,[obj.Cell.Name '.il']),obj.Cell.Library,skl);
+                runOutput = cdsRunSkill(fullfile(obj.Cell.DUT.Path,[obj.Cell.Name '.il']),obj.Cell.Library,skl,true);
             elseif(nargin == 2)
-                runOutput = cdsRunSkill(varargin{1},obj.Cell.Library,skl);
+                runOutput = cdsRunSkill(varargin{1},obj.Cell.Library,skl,true);
             end
             if(nargout == 1)
                 varargout = skl;

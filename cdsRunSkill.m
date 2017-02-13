@@ -26,6 +26,7 @@ function [ varargout ] = cdsRunSkill(skillScriptFile,library,varargin)
     p = inputParser;
     p.addRequired('skillScriptFile',@ischar);
     p.addRequired('library',@(in) ischar(in) || isa(in,'cdsLibrary'));
+    p.addOptional('skillScriptCell',{},@iscell);
     p.addOptional('Run',true,@islogical);
     p.parse(skillScriptFile,library,varargin{:});
     % Get library name
@@ -36,6 +37,7 @@ function [ varargout ] = cdsRunSkill(skillScriptFile,library,varargin)
     end
     % Write the skill script to a file
     if(nargin > 2)
+        disp(['Writing Skill Script to ' skillScriptFile]);
         fid = fopen(skillScriptFile,'w');
         for lineNum = 1:length(varargin{1})
             fprintf(fid,'%s\n',varargin{1}{lineNum});

@@ -6,9 +6,7 @@ classdef test < adexl.resultsInterface
     %  obj = adexl.test(corner ...)
     % INPUTS
     %  Corner - First corner for this test [cdsOutCorner](optional)
-
     % PARAMETERS
-    %  Result - Cadence run for this test [cdsOutRun](optional)
     %  Desktop - Opens a new desktop if one isn't open yet (logical)
     % Parameters  & Properties
     %  Design - The design to be simulated [skyCell or cdsCell]
@@ -31,6 +29,7 @@ classdef test < adexl.resultsInterface
     %   dc analysis`
     properties
         Design
+        Adexl
         Analyses
         CornerSet adexl.cornerSet
         Corners % An array of cdsOutCorners arranged by simNum
@@ -82,6 +81,7 @@ classdef test < adexl.resultsInterface
             p.KeepUnmatched = true;
             p.addOptional('corner',adexl.corner.empty,@(x) isa(x,'adexl.corner'));
 %             p.addOptional('Result',cdsOutRun.empty,@(x) isa(x,'cdsOutRun'));
+            p.addParameter('Adexl',adexl.cellview.empty,@(x) isa(x,'adexl.cellview'));
             p.addParameter('Analyses',analyses.DC.empty,@(x) isa(x,'analyses.analysisInterface'));
             p.addParameter('Corners',adexl.corner.empty,@(x) isa(x,'adexl.corner'));
             p.addParameter('CornerSet',adexl.cornerSet.empty,@(x) isa(x,'adexl.cornerSet'));
@@ -292,7 +292,11 @@ classdef test < adexl.resultsInterface
             skl = [skl'; obj.Analyses.skill'];                             % Analysis Setup
             skl = [skl; obj.Variables.skill('test',MipiStates)];          % Design Variables
             skl = [skl; obj.Outputs.skill(obj.Name)];
-            skl = [skl; obj.CornerSet.skill(MipiStates)];
+            cornerSkl = cell(length(obj.CornerSet),1);
+            for cornerNum = 1:length(obj.CornerSet)
+                cornerSkl{cornerNum} = obj.CornerSet(cornerNum).skill(MipiStates);
+            end
+            skl = [skl;cat(1,cornerSkl{:})];
             % Save All... Options
             if(~obj.SaveAllVoltages)
                 skl{end+1} = sprintf('asiSetKeepOptionVal(testSession ''save "selected")');

@@ -21,6 +21,20 @@ classdef cdsSkill
                 out = 'nil';
             end
         end
+        function out = cell2list(in)
+        %cell2list Converts a cell to a cadence list char array.
+        % returns a char with a Cadence list literal
+        %  e.g. '(in{1} in{2}) for a cell input, in, of length 2
+        % See Also: cdsAdexl
+            out = sprintf('''(%s)',strjoin(in,' '));
+        end
+        function out = cellStr2list(in)
+        %cell2list Converts a cell to a cadence list char array.
+        % returns a char with a Cadence list literal
+        %  e.g. '("in{1}" "in{2}") for a cell input, in, of length 2
+        % See Also: cdsAdexl
+            out = sprintf('''("%s")',strjoin(in,'" "'));
+        end
     end
     
 end

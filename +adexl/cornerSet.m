@@ -1,6 +1,19 @@
-classdef cornerSet
+classdef cornerSet < matlab.mixin.SetGet & matlab.mixin.Copyable
     %cornerSet A set of Corners
     %   A corner set containing multiple individual corners
+    %
+    % PARAMETERS and PROPERTIES
+    %  Corners - An adexl.corner object or array of objects.
+    %  ProcessCorner - The process corner [Char]
+    %  Temp - Temperature [numeric]
+    %  Variables - Set of variables [adexl.variables]
+    %  Process - The process of the design
+    % METHODS
+    %  sklCmds = skill(MipiStates) - Generates a set of skill commands for
+    %   adding the corner set to an adexl state [cell array]
+    %  ocnCmds = ocean(MipiStates) - Generates a set of ocean commands
+    %   adding the corner set to an ocean test
+    % SEE ALSO: adexl.corner, adexl.cellview
     
     properties
         Name
@@ -12,11 +25,11 @@ classdef cornerSet
 %         ModelFiles
 %         ModelGroups
         Process
-        Tests
+        Test
     end
     
     methods
-        function obj = cornerSet(Name,varargin)
+        function obj = cornerSet(varargin)
         %cornerSet create a new ADEXL cornerSet object
         %
         % See also: adexl.cornerSet
@@ -29,7 +42,7 @@ classdef cornerSet
             p.addParameter('Temp',[],@isnumeric);
             p.addParameter('Variables',adexl.variables.empty,@(x) isa(x,'adexl.variables'));
             p.addParameter('Process',processes.GENERIC.empty,@(x) isa(x,'cdsProcess'));
-            p.parse(Name,varargin{:});
+            p.parse(varargin{:});
             obj.Name = p.Results.Name;
             obj.Corners = p.Results.Corners;
             
@@ -82,10 +95,11 @@ classdef cornerSet
             ocn{end+1} = ')';
         end
         function skl = skill(obj,MipiStates)
-            
-            skl{1} = ['cornerH = axlPutCorner(sdb "' obj.Name '")'];
+            skl{1} = [';CORNER ' obj.Name];
+            skl{2} = ['cornerH = axlPutCorner(sdb "' obj.Name '")'];
             % Variables
-            skl = [skl'; obj.Variables.skill('corners',MipiStates)];
+            
+            skl = [skl'; obj.Variables.skill('corners',MipiStates)'];
             % Process
             if(obj.Variables.isVariable('SET_PROCESS'))
                 if(ischar(obj.Variables.SET_PROCESS))
@@ -104,6 +118,9 @@ classdef cornerSet
 %                 skl{end+1} = ['axlSetModelFile(modelHandle "' obj.Process.Paths.unixPath('ModelFile') '")'];
 %                 skl{end+1} = 'axlSetModelSection(modelHandle "")';
             end
+            % Disable other tests
+            % TODO
+%             cdsSkill.cellStr2list({obj.Test.Adexl.Tests.Name})
         end
     end
     methods (Static)
