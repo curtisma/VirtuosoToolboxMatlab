@@ -26,8 +26,11 @@ classdef cornerSet < matlab.mixin.SetGet & matlab.mixin.Copyable
 %         ModelGroups
         Process
         Test
+        
     end
-    
+    properties (Dependent)
+        SkillHandle
+    end
     methods
         function obj = cornerSet(varargin)
         %cornerSet create a new ADEXL cornerSet object
@@ -96,10 +99,11 @@ classdef cornerSet < matlab.mixin.SetGet & matlab.mixin.Copyable
         end
         function skl = skill(obj,MipiStates)
             skl{1} = [';CORNER ' obj.Name];
-            skl{2} = ['cornerH = axlPutCorner(sdb "' obj.Name '")'];
+            skl{2} = [obj.SkillHandle ' = axlPutCorner(sdb "' obj.Name '")'];
             % Variables
             
             skl = [skl'; obj.Variables.skill('corners',MipiStates)'];
+            skl{end+1} = ['axlPutVarList(' obj.SkillHandle ' varList)'];
             % Process
             if(obj.Variables.isVariable('SET_PROCESS'))
                 if(ischar(obj.Variables.SET_PROCESS))
@@ -109,7 +113,7 @@ classdef cornerSet < matlab.mixin.SetGet & matlab.mixin.Copyable
                 else
                     error('skyVer:cornerSet:SET_PROCESS','SET_PROCESS variable must be a char or cell');
                 end
-                skl{end+1} = 'modelHandle=axlPutModel(cornerH "header_MIPI.scs")';
+                skl{end+1} = ['modelHandle=axlPutModel(' obj.SkillHandle ' "header_MIPI.scs")'];
                 skl{end+1} = ['axlSetModelFile(modelHandle "' obj.Process.Paths.unixPath('ModelFile') '")'];
                 skl{end+1} = ['axlSetModelSection(modelHandle "' processSections '")'];
             else
@@ -118,9 +122,20 @@ classdef cornerSet < matlab.mixin.SetGet & matlab.mixin.Copyable
 %                 skl{end+1} = ['axlSetModelFile(modelHandle "' obj.Process.Paths.unixPath('ModelFile') '")'];
 %                 skl{end+1} = 'axlSetModelSection(modelHandle "")';
             end
-            % Disable other tests
-            % TODO
+            % Test Enables and Disables
+%             skl{end+1} = ['axlSetCornerTestListEnabled(CH_' obj.Name ' ' cdsSkill.cellStr2list({obj.Test.Name}) ' t)']; % Ensure the selected tests are enabled
+%             skl{end+1} = ['axlSetCornerTestListEnabled(CH_' obj.Name ' ' cdsSkill.cellStr2list(setdiff({obj.Test.Adexl.Tests.Name},{obj.Test.Name})) ' nil)']; % Disable unselected tests
+%             for testEnNum = 1:length(obj.AdexlView.Tests)
+%                 if(~strcmp(obj.Adexl.Tests(testEnNum).Name,obj.Name))
+%                     skl{end+1} = ['axlSetCornerTestEnabled(cornerH "' obj.AdexlView.Tests(testEnNum).Name '" nil)'];
+%                 else
+%                     skl{end+1} = ['axlSetCornerTestEnabled(cornerH "' obj.AdexlView.Tests(testEnNum).Name '" t)'];
+%                 end
+%             end
 %             cdsSkill.cellStr2list({obj.Test.Adexl.Tests.Name})
+        end
+        function skl = get.SkillHandle(obj)
+            skl = ['CH_' obj.Name];
         end
     end
     methods (Static)

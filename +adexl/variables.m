@@ -257,6 +257,8 @@ classdef variables < dynamicprops & matlab.mixin.Copyable
         end
         function skl = skill(obj,type,varargin)
             switch type
+                case {'global','cellview'}
+                    skl{1} = sprintf('axlPutVarList(sdb ''(%s))',strtrim(strjoin(cellfun(@(x,y) ['("' x '" "' num2str(y) '") '],obj.names,obj.values,'UniformOutput',false))));
                 case 'test'
                     skl{1} = sprintf('asiAddDesignVarList(testSession ''(%s))',strtrim(strjoin(cellfun(@(x,y) ['("' x '" "' num2str(y) '") '],obj.names,obj.values,'UniformOutput',false))));
                 case {'corner' 'corners'}
@@ -274,9 +276,10 @@ classdef variables < dynamicprops & matlab.mixin.Copyable
                         obj.SET_DATA_WORD = strrep(strtrim(vect2colon([obj.SET_DATA_WORD{:}],'Delimiter','off')),' ',',');
                     end
 %                     skl = cellfun(@(x) ['axlPutVar(cornerH "' x '" "' num2str(obj.(x)) '")'],vars,'UniformOutput',false);
-                    sklVarList = cellfun(@(x) ['("' x '" "' num2str(obj.(x)) '")'],obj.names(cellfun(@isnumeric,obj.values)),'UniformOutput',false);
+%                     sklVarList = cellfun(@(x) ['("' x '" "' num2str(obj.(x)) '")'],obj.names(cellfun(@isnumeric,obj.values)),'UniformOutput',false);
+                    sklVarList = cellfun(@(x) ['("' x '" "' num2str(obj.(x)) '")'],sort(obj.names),'UniformOutput',false);
                     skl{1} = sprintf('varList = ''(%s)',strjoin(sklVarList,' '));
-                    skl{2} = 'axlPutVarList(cornerH varList)';
+%                     skl{2} = 'axlPutVarList(cornerH varList)'; % Added to the corner skill function
             end
         end
     end

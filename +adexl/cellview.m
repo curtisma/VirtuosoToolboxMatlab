@@ -149,21 +149,33 @@ classdef cellview < matlab.mixin.SetGet & matlab.mixin.Copyable
             skl{11} = ['sdb = axlSetMainSetupDBLCV( axlSession "' obj.Cell.Library.UserLibraryName '" "' obj.Cell.Name '" "adexl")'];
             skl{12} = '';
             
+            skl{13} = ';====================== Cellview Setup ============================================';
+            skl{14} = '; Global Variables';
+            if(~isempty(obj.Variables))
+                skl = [skl'; obj.Variables.skill('global',obj.MipiStates)];          % Design Variables
+            else
+                skl{15} = '; No Global Variables';
+                skl = skl';
+            end
+            skl{end+1} = '';
+            
             % Setup Tests
             % Tests
             sklTests = arrayfun(@(x) x.skill(obj.MipiStates), obj.Tests,'UniformOutput',false);
             sklTests = reshape(cat(1,sklTests{:}),[],1);
-            skl = [skl'; sklTests];
+            skl = [skl; sklTests];
             skl{end+1} = '';
             
             skl{end+1} = ';====================== Disables ============================================';
-            skl{end+1} = 'axlSetAllVarsDisabled(sdb 1)'; % Disable All Global Variables
+%             skl{end+1} = 'axlSetAllVarsDisabled(sdb 1)'; % Disable All Global Variables
+            skl{end+1} = 'axlSetEachVarEnabled(sdb nil)'; % Disable each Global Variable
+            skl{end+1} = ['axlSetVarEnabledList(sdb ' cdsSkill.cellStr2list(obj.Cell.Adexl.Variables.names) ' t)']; % Enable Global Variables that should be enabled
             skl{end+1} = 'axlSetNominalCornerEnabled(sdb 0)'; % Disable All Nominal Corners
-%             for outerTest = 1:length(obj.Tests)
-%                 for innerTest = 1:length(obj.Tests)
-%                     
-%                 end
-%             end
+            skl{end+1} = 'cornersList = axlGetCorners(sdb)';
+            for testNum = 1:length(obj.Tests)
+                skl{end+1} = ['axlSetAllCornerTestEnabled(sdb "' obj.Tests(testNum).Name '" nil) ; Disable corners which were not selected'];
+                skl{end+1} = ['axlSetCornerListTestEnabled(' skySkill.cell2list({obj.Tests(testNum).CornerSet.SkillHandle},'fcn') ' "' obj.Tests(testNum).Name '" t) ; Enable selected corners'];
+            end
             skl{end+1} = '';
             
             skl{end+1} = ';====================== Save Setup ============================================';
@@ -179,15 +191,20 @@ classdef cellview < matlab.mixin.SetGet & matlab.mixin.Copyable
 %                 cellfun(@(sklChar) fprintf(fid,'%s\n',sklChar), skl);
 %                 fclose(fid);
 %             end
-            if(nargin == 1)
-                runOutput = cdsRunSkill(fullfile(obj.Cell.DUT.Path,[obj.Cell.Name '.il']),obj.Cell.Library,skl,true);
-            elseif(nargin == 2)
-                runOutput = cdsRunSkill(varargin{1},obj.Cell.Library,skl,true);
+            switch nargin
+                case 1
+                    scriptPath = fullfile(obj.Cell.DUT.Path,[obj.Cell.Name '.il']);
+                case 2
+                    scriptPath = varargin{1};
             end
-            if(nargout == 1)
-                varargout = skl;
-            elseif(nargout == 2)
-                varargout = {skl runOutput};
+            runOutput = cdsRunSkill(scriptPath,obj.Cell.Library,skl,true);
+            switch nargout
+                case 1
+                    varargout = skl;
+                case 2
+                    varargout = {skl runOutput};
+                case 3
+                    varargout = {skl runOutput scriptPath};
             end
         end
     end

@@ -288,8 +288,8 @@ classdef test < adexl.resultsInterface
                                                       'list("sim" "' obj.Simulator '"))) '];
             skl{4} = ['testSession = axlGetToolSession(axlSession "' obj.Name '")'];
             skl{5} = 'testSession = asiGetSession(testSession)';
-            %skl = [skl'; obj.Design.Library.Process.skillNomModelFile']; % Model Path and file information
-            skl = [skl'; obj.Analyses.skill'];                             % Analysis Setup
+            skl = [skl'; obj.Design.Library.Process.skillNomModels']; % Model Path and file information
+            skl = [skl; obj.Analyses.skill'];                             % Analysis Setup
             skl = [skl; obj.Variables.skill('test',MipiStates)];          % Design Variables
             skl = [skl; obj.Outputs.skill(obj.Name)];
             cornerSkl = cell(length(obj.CornerSet),1);
@@ -304,14 +304,8 @@ classdef test < adexl.resultsInterface
             skl{end+1} = sprintf('asiSetKeepOptionVal(testSession ''currents "selected")');
 
             
-            % Disable tests that do not belong to this corner
-%             skl{end+1:end+length(obj.AdexlView.Tests)-1} = ''; % Preallocate
-            for testEnNum = 1:length(obj.AdexlView.Tests)
-                if(~strcmp(obj.AdexlView.Tests(testEnNum).Name,obj.Name))
-                    skl{end+1} = ['axlSetCornerTestEnabled(cornerH "' obj.AdexlView.Tests(testEnNum).Name '" nil)'];
-                end
-            end
-            % Enable or disable corner
+           
+            % Enable or disable test
             skl{end+1} = ['axlSetEnabled(htest ' cdsSkill.sklLogical(obj.Enable) ')'];
 %             skl{2} = ['axlPutNote( sdb "test"
         end
