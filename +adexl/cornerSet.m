@@ -26,7 +26,7 @@ classdef cornerSet < matlab.mixin.SetGet & matlab.mixin.Copyable
 %         ModelGroups
         Process
         Test
-        
+        Spec
     end
     properties (Dependent)
         SkillHandle
@@ -45,6 +45,7 @@ classdef cornerSet < matlab.mixin.SetGet & matlab.mixin.Copyable
             p.addParameter('Temp',[],@isnumeric);
             p.addParameter('Variables',adexl.variables.empty,@(x) isa(x,'adexl.variables'));
             p.addParameter('Process',processes.GENERIC.empty,@(x) isa(x,'cdsProcess'));
+            p.addParameter('Spec',adexl.spec.empty,@(x) isa(x,'adexl.spec'));
             p.parse(varargin{:});
             obj.Name = p.Results.Name;
             obj.Corners = p.Results.Corners;
@@ -54,6 +55,7 @@ classdef cornerSet < matlab.mixin.SetGet & matlab.mixin.Copyable
             obj.ProcessCorner = p.Results.ProcessCorner;
             obj.Temp = p.Results.Temp;
             obj.Variables = p.Results.Variables;
+            obj.Spec = p.Results.Spec;
         end
         function export(obj,file)
         % export Exports the corners to an XML document.  This
@@ -72,7 +74,7 @@ classdef cornerSet < matlab.mixin.SetGet & matlab.mixin.Copyable
         
         end
         function ocn = ocean(obj,MipiStates)
-            skl{1} = [';---------- Corner "' obj.Name '" -------------'];
+            ocn{1} = [';---------- Corner "' obj.Name '" -------------'];
             ocn{1} = ['ocnxlCorner( "' obj.Name '"'];
             % Variables
 %             ocnVariables = cellfun(@(varName) ['      ("variable" "' varName '" "' num2str(obj.Variables.(varName)) '")'],obj.Variables.names,'UniformOutput',false);
@@ -104,6 +106,10 @@ classdef cornerSet < matlab.mixin.SetGet & matlab.mixin.Copyable
             
             skl = [skl'; obj.Variables.skill('corners',MipiStates)'];
             skl{end+1} = ['axlPutVarList(' obj.SkillHandle ' varList)'];
+            % Spec
+            if(~isempty(obj.Spec))
+            skl{end+1} = obj.Spec.skill;
+            end
             % Process
             if(obj.Variables.isVariable('SET_PROCESS'))
                 if(ischar(obj.Variables.SET_PROCESS))

@@ -22,9 +22,9 @@ classdef output < matlab.mixin.SetGet & matlab.mixin.Copyable
         PlotEn
         SaveEn
         Spec
-        SpecType
-        SpecCorners
-        Weight
+%         SpecType
+%         SpecCorners
+%         Weight
         Units
         Domain
         UserData
@@ -39,10 +39,10 @@ classdef output < matlab.mixin.SetGet & matlab.mixin.Copyable
             p.addParameter('EvalType','point',@(x) any(validatestring(x,{'point','corners'})));
             p.addParameter('PlotEn',false,@islogical);
             p.addParameter('SaveEn',true,@islogical);
-            p.addParameter('Spec',[],@isnumeric);
-            p.addParameter('SpecType','',@(x) any(validatestring(x,{'>','<','range'})));
-            p.addParameter('SpecTypical',[],@isnumeric);
-            p.addParameter('SpecCorners',{},@iscellstr);
+            p.addParameter('Spec',adexl.spec.empty,@(x) isa(x,'adexl.spec'));
+%             p.addParameter('SpecType','',@(x) any(validatestring(x,{'>','<','range'})));
+%             p.addParameter('SpecTypical',[],@isnumeric);
+%             p.addParameter('SpecCorners',{},@iscellstr);
             p.addParameter('Weight','',@ischar);
             p.addParameter('Units','',@ischar);
             p.addParameter('Domain','',@ischar);
@@ -56,9 +56,9 @@ classdef output < matlab.mixin.SetGet & matlab.mixin.Copyable
             obj.PlotEn = p.Results.PlotEn;
             obj.SaveEn = p.Results.SaveEn;
             obj.Spec = p.Results.Spec;
-            obj.SpecType = p.Results.SpecType;
-            obj.SpecCorners = p.Results.SpecCorners;
-            obj.Weight = p.Results.Weight;
+%             obj.SpecType = p.Results.SpecType;
+%             obj.SpecCorners = p.Results.SpecCorners;
+%             obj.Weight = p.Results.Weight;
             obj.Units = p.Results.Units;
             obj.UserData = p.Results.UserData;
         end
