@@ -9,7 +9,7 @@ classdef result < adexl.resultsInterface
     %  runObj = adexl.result(corner,...)
     %  runObj = adexl.result(test,...)
     % INPUTS
-    %  data- cdsOutTest or cdsOutCorner object or path to test data directory as a char
+    %  data- adexl.test or adexl.corner object or path to test data directory as a char
     % Parameters
     %  signals - 
     %  transientSignals - 
@@ -31,7 +31,7 @@ classdef result < adexl.resultsInterface
     
     methods
         function obj = result(varargin)
-        % cdsOutRun A single simulation run
+        % result A single simulation run
         %   See class description for usage information.
         %
         % See also: adexl.result
@@ -39,7 +39,7 @@ classdef result < adexl.resultsInterface
             obj = obj@adexl.resultsInterface(varargin{:}); % Superclass constructor
             p = inputParser;
             %p.KeepUnmatched = true;
-            p.addOptional('data',cdsOutTest.empty,@(x) ischar(x) || isa(x,'cdsOutCorner') || isa(x,'cdsOutTest'));
+            p.addOptional('data',adexl.test.empty,@(x) ischar(x) || isa(x,'adexl.corner') || isa(x,'adexl.test'));
             p.addParameter('signals',[],@iscell);
             p.addParameter('transientSignals',[],@iscell);
             p.addParameter('dcSignals',[],@iscell);
@@ -48,7 +48,7 @@ classdef result < adexl.resultsInterface
             
             % Load a full result if a results dir is provided
             if(ischar(p.Results.data) && adexl.result.isResultFolder(p.Results.data))
-                obj.Tests = cdsOutTest.empty;
+                obj.Tests = adexl.test.empty;
             	obj.loadData(varargin{:})
             % Normal corner path
             elseif(ischar(p.Results.data) || isa(p.Results.data,'adexl.corner'))
@@ -71,7 +71,7 @@ classdef result < adexl.resultsInterface
             end
         end
         function corner = addCorner(obj,corner,varargin)
-            corner = addCorner@cdsOut(obj,corner,varargin{:});
+            corner = addCorner@resultInterface(obj,corner,varargin{:});
             % Check that the corner corresponds to this run 
             if(isempty(obj.Tests) && ~isempty(corner))
             % initialize run with the properties of the given corner
@@ -110,16 +110,15 @@ classdef result < adexl.resultsInterface
         %  resultsDir - results directory containing a numbered folder for
         %               each corner sim number and a psf directory
         % Parameters
-        %  Any cdsOutCorner parameters
+        %  Any adexl.corner parameters
         %
-        % See also: cdsOutCorner
+        % See also: adexl.corner
             resultDir = dir(varargin{1});
             resultDir = str2double({resultDir.name});
             resultDir = resultDir(~isnan(resultDir));
             if(isempty(resultDir))
                 warning(['Data unavailable for:' varargin{1}]);
             end
-%             out = cdsOutMatlab.empty;
             for cornerNum = 1:length(resultDir)
                 testName = dir(fullfile(varargin{1},num2str(resultDir(cornerNum))));
                 testName = {testName.name};
@@ -165,7 +164,6 @@ classdef result < adexl.resultsInterface
                 obj.Name = val.Names.result;
             end
             obj.Tests = val;
-            % initialize cdsOutMatlab with the
         end
         function set.Process(obj,val)
             if(ischar(val))
@@ -179,7 +177,7 @@ classdef result < adexl.resultsInterface
         function varargout = subsref(obj,s)
         % subsref Provides customized indexing into the results property
         %
-        % See also: cdsOutMatlab, cdsOutMatlab/numArgumentsFromSubscript
+        % See also: adexl.result, adexl.result/numArgumentsFromSubscript
             if(length(s)>=2 && strcmp(s(1).type,'.') && strcmp(s(1).subs,'Tests'))
                 switch s(2).type
                     case {'{}' '()'}

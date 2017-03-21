@@ -73,10 +73,10 @@ classdef resultsInterface < matlab.mixin.SetGet & matlab.mixin.Copyable
         %
         % Saves it as a cell array of char arrays
             if(length(obj)>1)
-            	error('VirtuosoToolbox:cdsOutMatlab','Only run on a single corner of cdsOutMatlab, not all of them.');
+            	error('VirtuosoToolbox:adexl_resultInterface','Only run on a single corner of adexl.result, not all of them.');
             end
             if(~ischar(dirPath))
-                error('VirtuosoToolbox:cdsOutMatlab','The input must be a char path location or dir type');
+                error('VirtuosoToolbox:adexl_resultInterface','The input must be a char path location or dir type');
             end
             pathList = fields(obj.Paths);
             pathNameIdx = strcmp(dirPath,pathList);
@@ -118,15 +118,15 @@ classdef resultsInterface < matlab.mixin.SetGet & matlab.mixin.Copyable
             if(ischar(corner))
             % Initialize corner
                 if(nargin == 2)
-                    corner = cdsOutCorner(corner);
+                    corner = adexl.corner(corner);
                 elseif(nargin>2)
-                    corner = cdsOutCorner(corner,varargin{:});
+                    corner = adexl.corner(corner,varargin{:});
                 else
-                    error('VirtuosoToolbox:cdsOutMatlab:addCorner','Not enough inputs')
+                    error('VirtuosoToolbox:adexl_resultInterface:addCorner','Not enough inputs')
                 end
             end
-            if(~isa(corner,'cdsOutCorner'))
-                error('VirtuosoToolbox:cdsOutTest:addCorner','corner must be a cdsOutCorner');
+            if(~isa(corner,'adexl.corner'))
+                error('VirtuosoToolbox:adexl_resultsInterface:addCorner','corner must be a adexl.corner');
             end
         end
         function logLoc = startLog(obj,varargin)
@@ -168,7 +168,7 @@ classdef resultsInterface < matlab.mixin.SetGet & matlab.mixin.Copyable
     methods (Static)
         function simNum = getSimNum(axlCurrentResultsPath)
         % getSimNum Provides the sin number for each corner.  This is 
-        %  useful for saving each corner to a seperate cdsOutMatlab object
+        %  useful for saving each corner to a seperate results object
         %  and then returning to adexl by using the Results variable to show
         %  the correspondence between the adexl corner names and the sim
         %  number
@@ -181,8 +181,8 @@ classdef resultsInterface < matlab.mixin.SetGet & matlab.mixin.Copyable
         %  simNum - Simulation number assigned that is assigned to each
         %   corner.
         % EXAMPLE
-        %  Results = cdsOutMatlab.getSimNum(axlCurrentResultsPath);
-        %  MAT(Results) = cdsOutMatlab.getSimNum(axlCurrentResultsPath);
+        %  Results = result.getSimNum(axlCurrentResultsPath);
+        %  MAT(Results) = result.getSimNum(axlCurrentResultsPath);
         %  MAT.save(filePath)
         %
         % see also:

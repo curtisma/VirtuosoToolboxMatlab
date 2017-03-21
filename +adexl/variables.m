@@ -232,25 +232,25 @@ classdef variables < dynamicprops & matlab.mixin.Copyable
         % See Also: adexl.variables
             switch type 
                 case 'global'
-                    vars = setdiff(obj.names,'SET_SIM_PROCESS'); % Need to rework to handle SET_DATA_WORD
+                    vars = setdiff(obj.names,'SET_SIM_PROCESS'); % Need to rework to handle SET_MIPI_WORD
                     ocn = cellfun(@(x) ['ocnxlSweepVar(   "' x '" ' num2str(obj.(x)) ' )'],vars,'UniformOutput',false);
                 case 'globalDisableAll'
-                    vars = setdiff(obj.names,'SET_SIM_PROCESS'); % Need to rework to handle SET_DATA_WORD
+                    vars = setdiff(obj.names,'SET_SIM_PROCESS'); % Need to rework to handle SET_MIPI_WORD
                     ocn = cellfun(@(x) ['ocnxlDisableSweepVar(   "' x '")'],vars,'UniformOutput',false);
                 case 'test'
                     vars = setdiff(obj.names,'SET_SIM_PROCESS'); % Need to rework
-                    if(obj.isVariable('SET_DATA_WORD'))
-                        obj.SET_DATA_WORD = strsplit(obj.SET_DATA_WORD(2:end),',$');
-                        obj.SET_DATA_WORD = cellfun(@(word) varargin{1}.State(word), obj.SET_DATA_WORD,'UniformOutput',false);
-                        obj.SET_DATA_WORD = strrep(strtrim(vect2colon([obj.SET_DATA_WORD{:}],'Delimiter','off')),' ',',');
+                    if(obj.isVariable('SET_MIPI_WORD'))
+                        obj.SET_MIPI_WORD = strsplit(obj.SET_MIPI_WORD(2:end),',$');
+                        obj.SET_MIPI_WORD = cellfun(@(word) varargin{1}.State(word), obj.SET_MIPI_WORD,'UniformOutput',false);
+                        obj.SET_MIPI_WORD = strrep(strtrim(vect2colon([obj.SET_MIPI_WORD{:}],'Delimiter','off')),' ',',');
                     end
                     ocn = cellfun(@(x) ['desVar(   "' x '" ' num2str(obj.(x)) ' )'],vars,'UniformOutput',false);
                 case {'corner','corners'}
-                    vars = setdiff(obj.names,{'SET_SIM_PROCESS'}); % Need to rework to handle SET_DATA_WORD
-                    if(obj.isVariable('SET_DATA_WORD'))
-                        obj.SET_DATA_WORD = strsplit(obj.SET_DATA_WORD(2:end),',$');
-                        obj.SET_DATA_WORD = cellfun(@(word) varargin{1}.State(word), obj.SET_DATA_WORD,'UniformOutput',false);
-                        obj.SET_DATA_WORD = strrep(strtrim(vect2colon([obj.SET_DATA_WORD{:}],'Delimiter','off')),' ',',');
+                    vars = setdiff(obj.names,{'SET_SIM_PROCESS'}); % Need to rework to handle SET_MIPI_WORD
+                    if(obj.isVariable('SET_MIPI_WORD'))
+                        obj.SET_MIPI_WORD = strsplit(obj.SET_MIPI_WORD(2:end),',$');
+                        obj.SET_MIPI_WORD = cellfun(@(word) varargin{1}.State(word), obj.SET_MIPI_WORD,'UniformOutput',false);
+                        obj.SET_MIPI_WORD = strrep(strtrim(vect2colon([obj.SET_MIPI_WORD{:}],'Delimiter','off')),' ',',');
                     end
                     ocn = cellfun(@(x) ['      ("variable" "' x '" "' num2str(obj.(x)) '")'],vars,'UniformOutput',false);
             end
@@ -263,17 +263,17 @@ classdef variables < dynamicprops & matlab.mixin.Copyable
                     skl{1} = sprintf('asiAddDesignVarList(testSession ''(%s))',strtrim(strjoin(cellfun(@(x,y) ['("' x '" "' num2str(y) '") '],obj.names,obj.values,'UniformOutput',false))));
                 case {'corner' 'corners'}
 %                     vars = setdiff(obj.names,{'SET_SIM_PROCESS'});
-                    if(obj.isVariable('SET_DATA_WORD'))
-                        if(strcmp(obj.SET_DATA_WORD(1),'$'))
-                            obj.SET_DATA_WORD = strsplit(obj.SET_DATA_WORD(2:end),',$');
+                    if(obj.isVariable('SET_MIPI_WORD'))
+                        if(strcmp(obj.SET_MIPI_WORD(1),'$'))
+                            obj.SET_MIPI_WORD = strsplit(obj.SET_MIPI_WORD(2:end),',$');
                         end
                         % Need to rework so it doesn't catch it the second
                         % time around.
-                        if(~isempty(setdiff(obj.SET_DATA_WORD,varargin{1}.State.keys)))
-                            error('skyVer:adexl_variables:SET_DATA_WORD','Mipi states file does not contain all the states included in the STC file\n%s',strjoin(setdiff(obj.SET_DATA_WORD,varargin{1}.State.keys),', '));
+                        if(~isempty(setdiff(obj.SET_MIPI_WORD,varargin{1}.State.keys)))
+                            error('skyVer:adexl_variables:SET_MIPI_WORD','Mipi states file does not contain all the states included in the STC file\n%s',strjoin(setdiff(obj.SET_MIPI_WORD,varargin{1}.State.keys),', '));
                         end
-                        obj.SET_DATA_WORD = cellfun(@(word) varargin{1}.State(word), obj.SET_DATA_WORD,'UniformOutput',false);
-                        obj.SET_DATA_WORD = strrep(strtrim(vect2colon([obj.SET_DATA_WORD{:}],'Delimiter','off')),' ',',');
+                        obj.SET_MIPI_WORD = cellfun(@(word) varargin{1}.State(word), obj.SET_MIPI_WORD,'UniformOutput',false);
+                        obj.SET_MIPI_WORD = strrep(strtrim(vect2colon([obj.SET_MIPI_WORD{:}],'Delimiter','off')),' ',',');
                     end
 %                     skl = cellfun(@(x) ['axlPutVar(cornerH "' x '" "' num2str(obj.(x)) '")'],vars,'UniformOutput',false);
 %                     sklVarList = cellfun(@(x) ['("' x '" "' num2str(obj.(x)) '")'],obj.names(cellfun(@isnumeric,obj.values)),'UniformOutput',false);

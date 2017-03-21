@@ -3,7 +3,7 @@ classdef corner < adexl.resultsInterface
     %   Collects the data from a single Cadence simulation corner.
     % 
     % USE
-    %  obj = cdsOutCorners(axlCurrentResultsPath, ...)
+    %  obj = adexl.corner(axlCurrentResultsPath, ...)
     % PARAMETERS
     %  signals - defines the signals to save
     %  transientSignals - defines the signals to save only for a
@@ -113,7 +113,7 @@ classdef corner < adexl.resultsInterface
         %  analysis - analysis to load signal from (Char)
         %  signal -  signal name (Char)
         %
-        % See also: cdsOutMatlab
+        % See also: adexl.corner
             analysis = lower(analysis);
             switch analysis
                 case {'transient','tran-tran','tran','trans'}
@@ -196,23 +196,23 @@ classdef corner < adexl.resultsInterface
             %  Extracts the cell view name and test bench cell name from
             %  the netlist
             %
-            % See also: cdsOutCorner
+            % See also: adexl.corner
             obj.Paths.Netlist = strsplit(obj.Paths.psf,filesep);
             obj.Paths.Netlist = fullfile(char(strjoin(obj.Paths.netlist(1:end-1),filesep)),'netlist', 'input.scs');
-            obj.Netlist = cdsOutMatlab.loadTextFile(obj.Paths.netlist);
+            obj.Netlist = loadTextFile(obj.Paths.netlist);
             obj.Names.cellView = obj.Netlist{5}(22:end);
             obj.Names.testBenchCell = obj.Netlist{4}(22:end);
         end
         function getSpectreLog(obj)
         % Get Spectre log file
             obj.Paths.spectreLog = fullfile(obj.Paths.psf,'spectre.out');
-            obj.Info.log = cdsOutMatlab.loadTextFile(obj.Paths.spectreLog);
+            obj.Info.log = loadTextFile(obj.Paths.spectreLog);
         end
         function ProcessCorner = getProcessCorner(obj)
         % Get the model information
             obj.Paths.modelFileInfo = strsplit(obj.Paths.psf,filesep);
             obj.Paths.modelFileInfo = fullfile(char(strjoin(obj.Paths.modelFileInfo(1:end-1),filesep)),'netlist', '.modelFiles');
-            obj.Info.modelFileInfo = cdsOutMatlab.loadTextFile(obj.Paths.modelFileInfo);
+            obj.Info.modelFileInfo = loadTextFile(obj.Paths.modelFileInfo);
             if(~isempty(obj.Info.modelFileInfo) && (length(obj.Info.modelFileInfo)==1))
                 obj.ProcessCorner = obj.Info.modelFileInfo{1}(strfind(obj.Info.modelFileInfo{1},'section=')+8:end);
             elseif(~isempty(obj.Info.modelFileInfo))
@@ -238,11 +238,11 @@ classdef corner < adexl.resultsInterface
         end
         function set.test(obj,val)
         % 
-            if(~isa(val,'cdsOutTest'))
-                error('VirtuosoToolbox:cdsOutCorner:set_test','test needs to be a cdsOutTest object')
+            if(~isa(val,'adexl.test'))
+                error('VirtuosoToolbox:adexl_corner:set_test','test needs to be a adexl.corner object')
             end
 %             if(~strcmp(obj.Names.test,val.name))
-%                 error('VirtuosoToolbox:cdsOutCorner:set_test','test does not match the test of this corner')
+%                 error('VirtuosoToolbox:adexl_corner:set_test','test does not match the test of this corner')
 %             end
             obj.test = val;
         end
@@ -251,7 +251,7 @@ classdef corner < adexl.resultsInterface
                 val = processes.(val);
             end
             if(~isa(val,'cdsProcess'))
-                error('VirtuosoToolbox:cdsOutRun:setProcess','Process must be subclassed from cdsProcess')
+                error('VirtuosoToolbox:adexl_corner:setProcess','Process must be subclassed from cdsProcess')
             end
             obj.Process = val;
         end
@@ -262,7 +262,7 @@ classdef corner < adexl.resultsInterface
         % USAGE
         %  fieldName = obj.analysisName(analysis)
         %
-        % See also: cdsOutCorner
+        % See also: adexl.corner
             switch analysis
                 case {'dc','dc-dc'}
                     fieldName = 'dc';
@@ -271,7 +271,7 @@ classdef corner < adexl.resultsInterface
                 case {'dcOp','dcOp-dc'}
                     fieldName = 'dcOp';
                 otherwise
-                    error('VirtuosoToolbox:cdsOutCorner:analysisName',...
+                    error('VirtuosoToolbox:adexl_corner:analysisName',...
                           'Analysis not defined');
             end
         end
@@ -279,7 +279,7 @@ classdef corner < adexl.resultsInterface
     methods (Static)
         function simNum = getSimNum(axlCurrentResultsPath)
         % getSimNum Provides the sin number for each corner.  This is 
-        %  useful for saving each corner to a seperate cdsOutMatlab object
+        %  useful for saving each corner to a seperate adexl.result object
         %  and then returning to adexl by using the Results variable to show
         %  the correspondence between the adexl corner names and the sim
         %  number
@@ -292,8 +292,8 @@ classdef corner < adexl.resultsInterface
         %  SimNum - Simulation number assigned that is assigned to each
         %   corner.
         % EXAMPLE
-        %  Results = cdsOutMatlab.getSimNum(axlCurrentResultsPath);
-        %  MAT(Results) = cdsOutMatlab.getSimNum(axlCurrentResultsPath);
+        %  Results = adexl.corner.getSimNum(axlCurrentResultsPath);
+        %  MAT(Results) = adexl.corner.getSimNum(axlCurrentResultsPath);
         %  MAT.save(filePath)
         %
         % see also:

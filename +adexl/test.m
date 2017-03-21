@@ -5,7 +5,7 @@ classdef test < adexl.resultsInterface
     % USAGE
     %  obj = adexl.test(corner ...)
     % INPUTS
-    %  Corner - First corner for this test [cdsOutCorner](optional)
+    %  Corner - First corner for this test [adexl.corner](optional)
     % PARAMETERS
     %  Desktop - Opens a new desktop if one isn't open yet (logical)
     % Parameters  & Properties
@@ -32,7 +32,7 @@ classdef test < adexl.resultsInterface
         Adexl
         Analyses
         CornerSet adexl.cornerSet
-        Corners % An array of cdsOutCorners arranged by simNum
+        Corners % An array of adexl.corner arranged by simNum
         Variables adexl.variables
         Outputs adexl.output
         Temp % Nominal Temperature
@@ -59,28 +59,10 @@ classdef test < adexl.resultsInterface
         %test create a new ADEXL test object
         %
         % See also: adexl.test
-        
-%             obj@cdsOut(
-%             if(isa(varargin{1},'cdsOutCorner'))
-%                 if(isa(varargin{1},'cdsOutRun'))
-%                     if(nargin>2)
-%                         obj = obj@cdsOut(varargin{3:end}); % Superclass constructor
-%                     else
-%                         obj = obj@cdsOut; % Superclass constructor
-%                     end
-%                 elseif(nargin>1)
-%                     obj = obj@cdsOut(varargin{2:end}); % Superclass constructor
-%                 else
-%                     
-%                 end
-%             else
-%                 obj = obj@cdsOut(varargin{:}); % Superclass constructor
-%             end
             obj = obj@adexl.resultsInterface(varargin{:}); % Superclass constructor
             p = inputParser;
             p.KeepUnmatched = true;
             p.addOptional('corner',adexl.corner.empty,@(x) isa(x,'adexl.corner'));
-%             p.addOptional('Result',cdsOutRun.empty,@(x) isa(x,'cdsOutRun'));
             p.addParameter('Adexl',adexl.cellview.empty,@(x) isa(x,'adexl.cellview'));
             p.addParameter('Analyses',analyses.DC.empty,@(x) isa(x,'analyses.analysisInterface'));
             p.addParameter('Corners',adexl.corner.empty,@(x) isa(x,'adexl.corner'));
@@ -114,7 +96,7 @@ classdef test < adexl.resultsInterface
 %             if(~isempty(val))
 % %                 if(~strcmp(obj.name, val.Names.test))
 % %                 % Check that this corner is for this test
-% %                     error('VirtuosoToolbox:cdsOutTest:setCorners','Wrong test name');
+% %                     error('VirtuosoToolbox:adexl_test:setCorners','Wrong test name');
 % %                 end
 %                 val.test = obj;
 %             end
@@ -127,7 +109,7 @@ classdef test < adexl.resultsInterface
 %             end
         end
         function addCorner(obj,corner,varargin)
-            corner = addCorner@cdsOut(obj,corner,varargin{:});
+            corner = addCorner@adexl.resultsInterface(obj,corner,varargin{:});
             if(isempty(obj.Corners) && ~isempty(corner))
             % initialize test with the properties of the given corner
                 obj.Name = corner.Names.test;
@@ -136,7 +118,7 @@ classdef test < adexl.resultsInterface
             elseif(~isempty(obj.Corners) && ~isempty(corner))
                 if(~strcmp(obj.Name, corner.Names.test))
                 % Check that this corner is for this test
-                    error('VirtuosoToolbox:cdsOutTest:setCorners','Wrong test name');
+                    error('VirtuosoToolbox:adexl_test:setCorners','Wrong test name');
                 end
             end
             corner.test = obj;
@@ -178,7 +160,7 @@ classdef test < adexl.resultsInterface
                 else
                     obj.Paths.runObjFile = strjoin({obj.Paths.psfTmp 'runObjFile'},filesep);
                 end
-                obj.Info.runObjFile = cdsOutMatlab.loadTextFile(obj.Paths.runObjFile);
+                obj.Info.runObjFile = adexl.result.loadTextFile(obj.Paths.runObjFile);
                 if(isempty(obj.Info.runObjFile))
                     obj.dir(obj.Paths.runObjFile);
                     disp(obj.Info.dir.(obj.Paths.runObjFile).Names);
@@ -221,7 +203,7 @@ classdef test < adexl.resultsInterface
                 val = (cornersAvailable == obj.Info.numCorners);
             else
                 val = false;
-                warning('skyVer:cdsOutTest:get_Done','numCorners Unavailable');
+                warning('skyVer:adexl_test:get_Done','numCorners Unavailable');
             end
         end
         function val = get.AnalysisNames(obj)
@@ -253,7 +235,7 @@ classdef test < adexl.resultsInterface
                 val = processes.(val);
             end
             if(~isa(val,'cdsProcess'))
-                error('VirtuosoToolbox:cdsOutRun:setProcess','Process must be subclassed from cdsProcess')
+                error('VirtuosoToolbox:adexl_result:setProcess','Process must be subclassed from cdsProcess')
             end
             obj.Process = val;
         end
